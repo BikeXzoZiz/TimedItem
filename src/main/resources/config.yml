@@ -1,0 +1,51 @@
+# TimedItem 2.0.0
+# Every key has a built-in default - if a key is missing the default is
+# used and written back to this file, so a partial config never crashes.
+
+config-version: 2
+
+Messages:
+  prefix: "&6[TimedItem] &r"
+  expire: "&cYour item has expired and was removed!"
+  no_item: "&cHold the item you want to manage first."
+  player_only: "&cOnly players can use this command."
+  no_timer: "&7The item in your hand has no timer."
+  item_cleared: "&aTimer removed from the item in your hand."
+  invalid_usage: "&cUsage: /ti set <time>, /ti remove, /ti info, /ti reload"
+  config_reload: "&aTimedItem config reloaded."
+  time_set: "&aTimer set: &e{time}"
+  info_remaining: "&7Time remaining: &e{time}"
+  info_lifetime: "&7Lifetime: &e{time} &7(starts on first use)"
+
+DateFormat:
+  # Lore prefixes shown on timed items. Changing these after items with
+  # timers already exist will make those items unrecognizable.
+  # Avoid a trailing "&s" (it would collide with the internal separator).
+  expires_at: "&cExpires: "
+  useful_life: "&7Lifetime: "
+  # Unit labels used by /ti set and shown in the lore, e.g. 1d12h30m
+  s: "s"
+  m: "m"
+  h: "h"
+  d: "d"
+
+Settings:
+  # true  = the timer starts counting on the item's first click/use
+  # false = the timer starts immediately when /ti set is used
+  start_date_calculate_on_click: true
+  # Reset the player's max health to 20 when expired armor is removed
+  # (anti-exploit for health-boosting timed armor).
+  reset_player_health_if_armor: true
+  expire_check:
+    # Also check every online player's inventory periodically, instead of
+    # only on inventory click / item use / join / damage events.
+    enabled: true
+    interval_seconds: 10
+  sound:
+    # Played at the player when an item expires. The name is a sound key
+    # which works on every 1.13+ server:
+    # https://minecraft.wiki/w/Sounds.json
+    enabled: true
+    name: "entity.blaze.death"
+    volume: 10.0
+    pitch: 1.2
