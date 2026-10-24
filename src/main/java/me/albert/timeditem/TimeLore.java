@@ -17,9 +17,10 @@ import java.util.Map;
  *
  *   expiry line   : {DateFormat.expires_at}§s{yyyy-MM-dd HH:mm:ss}
  *   lifetime line : {DateFormat.useful_life}§s{seconds}§s{unit label}
+ *   paused line   : {DateFormat.paused}§s{seconds}§s{unit label}
  *
  * 1.x wrote the lifetime line as {amount}§s{single unit}; those items are
- * still parsed. 2.0 writes {total seconds}§s{combined label such as 1d12h}.
+ * still parsed. 2.x writes {total seconds}§s{combined label such as 1d12h}.
  */
 public final class TimeLore {
 
@@ -30,7 +31,9 @@ public final class TimeLore {
         /** Carries a concrete expiry date. */
         EXPIRE,
         /** Carries a lifetime that starts counting on first use. */
-        LIFETIME
+        LIFETIME,
+        /** Carries a frozen remaining time; counts down only after resuming. */
+        PAUSED
     }
 
     private TimeLore() {
@@ -52,6 +55,9 @@ public final class TimeLore {
             }
             if (line.startsWith(config.getUsefulLifePrefix())) {
                 return Type.LIFETIME;
+            }
+            if (line.startsWith(config.getPausedPrefix())) {
+                return Type.PAUSED;
             }
         }
         return null;
@@ -76,7 +82,16 @@ public final class TimeLore {
 
     /** Returns the lifetime in seconds, or -1 when the tag is absent or unparsable. */
     public static long lifetimeSeconds(ItemStack item, PluginConfig config) {
-        String line = findLine(item, config.getUsefulLifePrefix());
+        return lineSeconds(item, config, config.getUsefulLifePrefix());
+    }
+
+    /** Returns the frozen remaining time of a paused item in seconds, or -1. */
+    public static long pausedSeconds(ItemStack item, PluginConfig config) {
+        return lineSeconds(item, config, config.getPausedPrefix());
+    }
+
+    private static long lineSeconds(ItemStack item, PluginConfig config, String prefix) {
+        String line = findLine(item, prefix);
         if (line == null) {
             return -1;
         }
@@ -89,13 +104,13 @@ public final class TimeLore {
         Map<String, Long> units = config.unitSeconds();
         long parsed = DurationParser.parse(label, units);
         if (parsed > 0) {
-            return parsed; // 2.0 combined label such as "1d12h"
+            return parsed; // 2.x combined label such as "1d12h"
         }
         Long multiplier = units.get(label.toLowerCase(Locale.ROOT));
         if (multiplier != null && amount >= 0) {
             return amount * multiplier; // 1.x single-unit label such as "m"
         }
-        return amount >= 0 ? amount : -1; // 2.0 fallback: the amount field holds seconds
+        return amount >= 0 ? amount : -1; // 2.x fallback: the amount field holds seconds
     }
 
     /** Returns true when the item carries an expiry date that has already passed. */
@@ -111,6 +126,20 @@ public final class TimeLore {
         setTimerLine(item, config, line);
     }
 
+    /** Writes a concrete expiry date {seconds} from now, replacing any previous timer. */
+    public static void applyExpiry(ItemStack item, PluginConfig config, long seconds) {
+        String line = config.getExpiresAtPrefix()
+                + DELIMITER + LORE_FORMAT.format(LocalDateTime.now().plusSeconds(seconds));
+        setTimerLine(item, config, line);
+    }
+
+    /** Freezes the given remaining time on the item, replacing any previous timer. */
+    public static void applyPaused(ItemStack item, PluginConfig config, long seconds) {
+        String label = formatDuration(seconds, config);
+        String line = config.getPausedPrefix() + DELIMITER + seconds + DELIMITER + label;
+        setTimerLine(item, config, line);
+    }
+
     /**
      * Converts a lifetime into a concrete expiry date starting now.
      * Returns false when the item carries no parsable lifetime.
@@ -120,9 +149,7 @@ public final class TimeLore {
         if (seconds <= 0) {
             return false;
         }
-        String line = config.getExpiresAtPrefix()
-                + DELIMITER + LORE_FORMAT.format(LocalDateTime.now().plusSeconds(seconds));
-        setTimerLine(item, config, line);
+        applyExpiry(item, config, seconds);
         return true;
     }
 
@@ -155,7 +182,8 @@ public final class TimeLore {
         return sb.toString();
     }
 
-    private static String findLine(ItemStack item, String prefix) {
+    /** Returns the first lore line starting with the given prefix, or null. */
+    public static String findLine(ItemStack item, String prefix) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasLore()) {
             return null;
@@ -182,8 +210,10 @@ public final class TimeLore {
         if (meta.hasLore() && meta.getLore() != null) {
             String expirePrefix = config.getExpiresAtPrefix();
             String lifePrefix = config.getUsefulLifePrefix();
+            String pausedPrefix = config.getPausedPrefix();
             for (String entry : meta.getLore()) {
-                if (!entry.startsWith(expirePrefix) && !entry.startsWith(lifePrefix)) {
+                if (!entry.startsWith(expirePrefix) && !entry.startsWith(lifePrefix)
+                        && !entry.startsWith(pausedPrefix)) {
                     kept.add(entry);
                 }
             }

@@ -1,17 +1,24 @@
-# TimedItem 2.0.0
+# TimedItem 2.1.0
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 
-config-version: 2
+config-version: 3
 
 Messages:
   prefix: "&6[TimedItem] &r"
   expire: "&cYour item has expired and was removed!"
+  expire_soon: "&eYour item will expire in &c{time}&e!"
   no_item: "&cHold the item you want to manage first."
   player_only: "&cOnly players can use this command."
   no_timer: "&7The item in your hand has no timer."
   item_cleared: "&aTimer removed from the item in your hand."
-  invalid_usage: "&cUsage: /ti set <time>, /ti remove, /ti info, /ti reload"
+  time_added: "&aTime added. Remaining: &e{time}"
+  timer_paused: "&aTimer paused with &e{time}&a remaining."
+  timer_resumed: "&aTimer resumed. Expires in &e{time}&a."
+  timer_not_started: "&7The timer on this item has not started yet."
+  already_paused: "&7The timer on this item is already paused."
+  already_running: "&7The timer on this item is already running."
+  invalid_usage: "&cUsage: /ti set <time>, /ti add <time>, /ti pause, /ti resume, /ti remove, /ti info, /ti reload"
   config_reload: "&aTimedItem config reloaded."
   time_set: "&aTimer set: &e{time}"
   info_remaining: "&7Time remaining: &e{time}"
@@ -23,6 +30,8 @@ DateFormat:
   # Avoid a trailing "&s" (it would collide with the internal separator).
   expires_at: "&cExpires: "
   useful_life: "&7Lifetime: "
+  # Shown on items whose timer was frozen with /ti pause
+  paused: "&7Paused: "
   # Unit labels used by /ti set and shown in the lore, e.g. 1d12h30m
   s: "s"
   m: "m"
@@ -36,11 +45,33 @@ Settings:
   # Reset the player's max health to 20 when expired armor is removed
   # (anti-exploit for health-boosting timed armor).
   reset_player_health_if_armor: true
+  # Anonymous usage statistics via bStats (https://bstats.org)
+  metrics: true
   expire_check:
     # Also check every online player's inventory periodically, instead of
     # only on inventory click / item use / join / damage events.
     enabled: true
     interval_seconds: 10
+  warning:
+    # One-time message + sound when an item enters its final seconds.
+    # Requires expire_check to be enabled.
+    enabled: true
+    seconds: 60
+    sound:
+      name: "block.note_block.pling"
+      volume: 1.0
+      pitch: 1.5
+  particles:
+    # Effect played at the player when an item expires.
+    enabled: true
+    # Particle name, e.g. FLAME, CRIT, SMOKE, HEART (unknown names fall back to FLAME)
+    name: "FLAME"
+    count: 30
+  expiry_commands:
+    # Console commands run when a player's item expires, {player} available. e.g.:
+    # - "say {player}'s timed item expired!"
+    # - "give {player} diamond 1"
+    []
   sound:
     # Played at the player when an item expires. The name is a sound key
     # which works on every 1.13+ server:
@@ -49,3 +80,7 @@ Settings:
     name: "entity.blaze.death"
     volume: 10.0
     pitch: 1.2
+  actionbar:
+    # Shows the remaining time in the actionbar while holding a timed item.
+    enabled: true
+    format: "&e⌛ {time}"

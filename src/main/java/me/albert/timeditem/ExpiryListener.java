@@ -10,11 +10,18 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Deletes expired items and starts not-yet-started lifetimes.
@@ -31,6 +38,8 @@ public final class ExpiryListener implements Listener {
     private static final int ARMOR_END = 39;
 
     private final TimedItemPlugin plugin;
+    /** Player UUID -> timer lore lines already warned about (one warning per item). */
+    private final Map<UUID, Set<String>> warned = new HashMap<UUID, Set<String>>();
 
     public ExpiryListener(TimedItemPlugin plugin) {
         this.plugin = plugin;
@@ -76,6 +85,11 @@ public final class ExpiryListener implements Listener {
         }, 1L);
     }
 
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        warned.remove(event.getPlayer().getUniqueId());
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player)) {
@@ -119,7 +133,42 @@ public final class ExpiryListener implements Listener {
                     && inv.getItem(slot) != null) {
                 inv.setItem(slot, inv.getItem(slot)); // write back in case the stack was a copy
             }
+            warnIfNeeded(player, item, config);
         }
+    }
+
+    /** One-time message + sound when an item enters its final warning window. */
+    private void warnIfNeeded(Player player, ItemStack item, PluginConfig config) {
+        if (!config.isWarningEnabled()) {
+            return;
+        }
+        if (TimeLore.typeOf(item, config) != TimeLore.Type.EXPIRE) {
+            return;
+        }
+        LocalDateTime expiry = TimeLore.expiryOf(item, config);
+        if (expiry == null) {
+            return;
+        }
+        long remaining = Duration.between(LocalDateTime.now(), expiry).getSeconds();
+        if (remaining <= 0 || remaining > config.getWarningSeconds()) {
+            return;
+        }
+        String key = TimeLore.findLine(item, config.getExpiresAtPrefix());
+        if (key == null) {
+            return;
+        }
+        Set<String> playerWarned = warned.get(player.getUniqueId());
+        if (playerWarned == null) {
+            playerWarned = new HashSet<String>();
+            warned.put(player.getUniqueId(), playerWarned);
+        }
+        if (!playerWarned.add(key)) {
+            return; // already warned about this item
+        }
+        player.sendMessage(config.getPrefix()
+                + config.getExpireSoon().replace("{time}", TimeLore.formatDuration(remaining, config)));
+        player.playSound(player.getLocation(), config.getWarningSound(),
+                config.getWarningVolume(), config.getWarningPitch());
     }
 
     /**
@@ -149,10 +198,22 @@ public final class ExpiryListener implements Listener {
                     config.getSoundVolume(), config.getSoundPitch());
         }
         removal.run();
+        if (config.isParticleEnabled()) {
+            ParticleCompat.spawn(player, config.getParticleName(), config.getParticleCount());
+        }
         if (armor && config.isResetPlayerHealthIfArmor()) {
             HealthCompat.resetMaxHealth(player);
         }
         player.sendMessage(config.getPrefix() + config.getExpire());
+        for (String command : config.getExpiryCommands()) {
+            String cmd = command.replace("{player}", player.getName());
+            if (cmd.startsWith("/")) {
+                cmd = cmd.substring(1);
+            }
+            if (!cmd.isEmpty()) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+            }
+        }
     }
 
     private void clearHeldSlot(PlayerInteractEvent event) {

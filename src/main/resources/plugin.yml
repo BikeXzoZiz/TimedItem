@@ -7,7 +7,7 @@ authors: [BikeXzoZiz]
 commands:
   timeditem:
     description: Manage timed items
-    usage: /<command> set <time> | remove | info | reload
+    usage: /<command> set <time> | add <time> | pause | resume | remove | info | reload
     aliases: [ti]
     permission: timeditem.admin
     permission-message: §cYou do not have permission to use TimedItem.
