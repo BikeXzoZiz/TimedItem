@@ -1,8 +1,8 @@
-# TimedItem 2.1.0
+# TimedItem 2.2.0
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 
-config-version: 3
+config-version: 4
 
 Messages:
   prefix: "&6[TimedItem] &r"
@@ -52,6 +52,9 @@ Settings:
     # only on inventory click / item use / join / damage events.
     enabled: true
     interval_seconds: 10
+    # Also scan ground items, item frames and armor stands for expired
+    # items every interval. Off by default - it walks every loaded world.
+    scan_world_items: false
   warning:
     # One-time message + sound when an item enters its final seconds.
     # Requires expire_check to be enabled.

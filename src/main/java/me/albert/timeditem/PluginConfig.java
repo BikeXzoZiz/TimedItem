@@ -50,6 +50,7 @@ public final class PluginConfig {
     private boolean metricsEnabled;
     private boolean expireCheckEnabled;
     private int expireCheckSeconds;
+    private boolean scanWorldItems;
     private boolean warningEnabled;
     private int warningSeconds;
     private String warningSound;
@@ -73,7 +74,7 @@ public final class PluginConfig {
     public void load() {
         plugin.saveDefaultConfig();
         FileConfiguration raw = plugin.getConfig();
-        raw.addDefault("config-version", 3);
+        raw.addDefault("config-version", 4);
         raw.addDefault("Messages.prefix", "&6[TimedItem] &r");
         raw.addDefault("Messages.expire", "&cYour item has expired and was removed!");
         raw.addDefault("Messages.expire_soon", "&eYour item will expire in &c{time}&e!");
@@ -105,6 +106,7 @@ public final class PluginConfig {
         raw.addDefault("Settings.metrics", true);
         raw.addDefault("Settings.expire_check.enabled", true);
         raw.addDefault("Settings.expire_check.interval_seconds", 10);
+        raw.addDefault("Settings.expire_check.scan_world_items", false);
         raw.addDefault("Settings.warning.enabled", true);
         raw.addDefault("Settings.warning.seconds", 60);
         raw.addDefault("Settings.warning.sound.name", "block.note_block.pling");
@@ -162,6 +164,7 @@ public final class PluginConfig {
         metricsEnabled = raw.getBoolean("Settings.metrics", true);
         expireCheckEnabled = raw.getBoolean("Settings.expire_check.enabled", true);
         expireCheckSeconds = Math.max(1, raw.getInt("Settings.expire_check.interval_seconds", 10));
+        scanWorldItems = raw.getBoolean("Settings.expire_check.scan_world_items", false);
         warningEnabled = raw.getBoolean("Settings.warning.enabled", true);
         warningSeconds = Math.max(1, raw.getInt("Settings.warning.seconds", 60));
         warningSound = raw.getString("Settings.warning.sound.name");
@@ -306,6 +309,10 @@ public final class PluginConfig {
 
     public int getExpireCheckSeconds() {
         return expireCheckSeconds;
+    }
+
+    public boolean isScanWorldItems() {
+        return scanWorldItems;
     }
 
     public boolean isWarningEnabled() {

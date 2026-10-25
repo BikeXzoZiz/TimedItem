@@ -21,13 +21,21 @@ public final class ParticleCompat {
     private ParticleCompat() {
     }
 
+    /** Spawns the particle around the player. */
     public static void spawn(Player player, String name, int count) {
+        spawnAt(player, player.getLocation().add(0.0, 1.0, 0.0), name, count);
+    }
+
+    /** Spawns the particle around an arbitrary location (e.g. a ground item). */
+    public static void spawnAt(Player viewer, Location center, String name, int count) {
         Particle particle = resolve(name);
         if (particle == null) {
             return;
         }
-        World world = player.getWorld();
-        Location center = player.getLocation().add(0.0, 1.0, 0.0);
+        World world = center.getWorld();
+        if (world == null) {
+            return;
+        }
         world.spawnParticle(particle, center, count, 0.4, 0.4, 0.4);
     }
 

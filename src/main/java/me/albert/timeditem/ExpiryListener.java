@@ -1,12 +1,16 @@
 package me.albert.timeditem;
 
+import me.albert.timeditem.api.ItemExpireEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -29,7 +33,7 @@ import java.util.UUID;
  * The removal step differs per context so the deleted stack can never
  * linger as a ghost item: clicks clear the clicked slot, interactions
  * clear the used hand, inventory scans null the slot, and damage rewrites
- * the armor array.
+ * the armor array. Items on the ground are removed when picked up.
  */
 public final class ExpiryListener implements Listener {
 
@@ -38,7 +42,7 @@ public final class ExpiryListener implements Listener {
     private static final int ARMOR_END = 39;
 
     private final TimedItemPlugin plugin;
-    /** Player UUID -> timer lore lines already warned about (one warning per item). */
+    /** Player UUID -> timer lines already warned about (one warning per item). */
     private final Map<UUID, Set<String>> warned = new HashMap<UUID, Set<String>>();
 
     public ExpiryListener(TimedItemPlugin plugin) {
@@ -117,44 +121,59 @@ public final class ExpiryListener implements Listener {
         }
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onPickup(EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player)) {
+            return;
+        }
+        Player player = (Player) event.getEntity();
+        if (player.getGameMode() == GameMode.CREATIVE) {
+            return;
+        }
+        ItemStack stack = event.getItem().getItemStack();
+        PluginConfig config = plugin.pluginConfig();
+        TimeLore.TimerInfo info = TimeLore.analyze(stack, config);
+        if (info == null || info.getType() != TimeLore.Type.EXPIRE
+                || info.getExpiry() == null || !info.getExpiry().isBefore(LocalDateTime.now())) {
+            return;
+        }
+        event.setCancelled(true);
+        expireNow(stack, player, () -> event.getItem().remove(), false, config);
+    }
+
     /** Checks every slot of the player's inventory. Used on join and by the periodic task. */
     public void scanInventory(Player player, boolean allowStart) {
         PluginConfig config = plugin.pluginConfig();
         PlayerInventory inv = player.getInventory();
         ItemStack[] contents = inv.getContents();
+        LocalDateTime now = LocalDateTime.now();
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];
             if (item == null || item.getType() == Material.AIR) {
                 continue;
             }
+            TimeLore.TimerInfo info = TimeLore.analyze(item, config);
+            if (info == null) {
+                continue;
+            }
             final int slot = i;
             boolean armor = i >= ARMOR_START && i <= ARMOR_END;
-            if (process(item, player, allowStart, () -> inv.setItem(slot, null), armor)
-                    && inv.getItem(slot) != null) {
+            boolean changed = handleInfo(info, item, player, allowStart,
+                    () -> inv.setItem(slot, null), armor, config, now);
+            if (changed && inv.getItem(slot) != null) {
                 inv.setItem(slot, inv.getItem(slot)); // write back in case the stack was a copy
             }
-            warnIfNeeded(player, item, config);
+            warnIfNeeded(player, info, config, now);
         }
     }
 
     /** One-time message + sound when an item enters its final warning window. */
-    private void warnIfNeeded(Player player, ItemStack item, PluginConfig config) {
-        if (!config.isWarningEnabled()) {
+    private void warnIfNeeded(Player player, TimeLore.TimerInfo info, PluginConfig config, LocalDateTime now) {
+        if (!config.isWarningEnabled() || info.getType() != TimeLore.Type.EXPIRE || info.getExpiry() == null) {
             return;
         }
-        if (TimeLore.typeOf(item, config) != TimeLore.Type.EXPIRE) {
-            return;
-        }
-        LocalDateTime expiry = TimeLore.expiryOf(item, config);
-        if (expiry == null) {
-            return;
-        }
-        long remaining = Duration.between(LocalDateTime.now(), expiry).getSeconds();
+        long remaining = Duration.between(now, info.getExpiry()).getSeconds();
         if (remaining <= 0 || remaining > config.getWarningSeconds()) {
-            return;
-        }
-        String key = TimeLore.findLine(item, config.getExpiresAtPrefix());
-        if (key == null) {
             return;
         }
         Set<String> playerWarned = warned.get(player.getUniqueId());
@@ -162,7 +181,7 @@ public final class ExpiryListener implements Listener {
             playerWarned = new HashSet<String>();
             warned.put(player.getUniqueId(), playerWarned);
         }
-        if (!playerWarned.add(key)) {
+        if (!playerWarned.add(info.getLine())) {
             return; // already warned about this item
         }
         player.sendMessage(config.getPrefix()
@@ -172,32 +191,55 @@ public final class ExpiryListener implements Listener {
     }
 
     /**
-     * Handles one item: deletes it when expired, otherwise converts a
-     * not-yet-started lifetime when allowed. Returns true when the item
-     * state changed (deleted or converted).
+     * Handles one pre-analyzed item: deletes it when expired, otherwise
+     * converts a not-yet-started lifetime when allowed. Returns true when
+     * the item state changed (deleted or converted).
      */
-    private boolean process(ItemStack item, Player player, boolean allowStart, Runnable removal, boolean armor) {
-        PluginConfig config = plugin.pluginConfig();
-        TimeLore.Type type = TimeLore.typeOf(item, config);
-        if (type == TimeLore.Type.EXPIRE) {
-            if (TimeLore.isExpired(item, config, LocalDateTime.now())) {
-                removeExpired(item, player, removal, armor, config);
-                return true;
+    private boolean handleInfo(TimeLore.TimerInfo info, ItemStack item, Player player, boolean allowStart,
+                               Runnable removal, boolean armor, PluginConfig config, LocalDateTime now) {
+        if (info.getType() == TimeLore.Type.EXPIRE) {
+            if (info.getExpiry() != null && info.getExpiry().isBefore(now)) {
+                return expireNow(item, player, removal, armor, config);
             }
             return false;
         }
-        if (type == TimeLore.Type.LIFETIME && allowStart) {
-            return TimeLore.startLifetime(item, config);
+        if (info.getType() == TimeLore.Type.LIFETIME && allowStart) {
+            return TimeLore.startLifetime(item, config, player);
         }
         return false;
     }
 
-    private void removeExpired(ItemStack item, Player player, Runnable removal, boolean armor, PluginConfig config) {
+    /** Analyzes and handles one item (single-meta-read entry point for events). */
+    private boolean process(ItemStack item, Player player, boolean allowStart, Runnable removal, boolean armor) {
+        PluginConfig config = plugin.pluginConfig();
+        TimeLore.TimerInfo info = TimeLore.analyze(item, config);
+        if (info == null) {
+            return false;
+        }
+        return handleInfo(info, item, player, allowStart, removal, armor, config, LocalDateTime.now());
+    }
+
+    /**
+     * Shared expiry routine for every context. Fires the cancellable
+     * {@link ItemExpireEvent} first; when cancelled nothing happens and
+     * false is returned. Player-bound effects only run when a player is
+     * involved (ground expiry has no message/sound of its own).
+     */
+    public static boolean expireNow(ItemStack item, Player player, Runnable removal, boolean armor,
+                                    PluginConfig config) {
+        ItemExpireEvent event = new ItemExpireEvent(item, player);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return false;
+        }
+        removal.run();
+        if (player == null) {
+            return true;
+        }
         if (config.isSoundEnabled()) {
             player.playSound(player.getLocation(), config.getSoundName(),
                     config.getSoundVolume(), config.getSoundPitch());
         }
-        removal.run();
         if (config.isParticleEnabled()) {
             ParticleCompat.spawn(player, config.getParticleName(), config.getParticleCount());
         }
@@ -214,6 +256,24 @@ public final class ExpiryListener implements Listener {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
             }
         }
+        return true;
+    }
+
+    /** Nearest player within the radius of the location, or null. */
+    public static Player nearestPlayer(Location center, double radius) {
+        Player nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+        for (Player player : center.getWorld().getPlayers()) {
+            if (!player.getWorld().equals(center.getWorld())) {
+                continue;
+            }
+            double distance = player.getLocation().distanceSquared(center);
+            if (distance <= radius * radius && distance < nearestDistance) {
+                nearest = player;
+                nearestDistance = distance;
+            }
+        }
+        return nearest;
     }
 
     private void clearHeldSlot(PlayerInteractEvent event) {

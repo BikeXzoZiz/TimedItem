@@ -4,10 +4,11 @@ main: me.albert.timeditem.TimedItemPlugin
 api-version: '1.13'
 description: Give items a lifetime - they expire when the timer runs out.
 authors: [BikeXzoZiz]
+softdepend: [PlaceholderAPI]
 commands:
   timeditem:
     description: Manage timed items
-    usage: /<command> set <time> | add <time> | pause | resume | remove | info | reload
+    usage: /<command> set <time> | add <time> | pause | resume | remove | info | menu | reload
     aliases: [ti]
     permission: timeditem.admin
     permission-message: §cYou do not have permission to use TimedItem.

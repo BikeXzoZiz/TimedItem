@@ -61,6 +61,13 @@ public final class TimedItemCommand implements CommandExecutor {
             }
             return true;
         }
+        if (sub.equals("menu")) {
+            Player player = requirePlayer(sender, config);
+            if (player != null) {
+                plugin.menu().open(player);
+            }
+            return true;
+        }
         if (sub.equals("remove")) {
             Player player = requirePlayer(sender, config);
             if (player != null) {

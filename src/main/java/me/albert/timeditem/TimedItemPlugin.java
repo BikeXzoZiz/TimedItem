@@ -1,5 +1,7 @@
 package me.albert.timeditem;
 
+import me.albert.timeditem.api.TimedItemAPI;
+import me.albert.timeditem.hook.TimedItemExpansion;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -13,24 +15,46 @@ public final class TimedItemPlugin extends JavaPlugin {
 
     private PluginConfig config;
     private ExpiryListener listener;
+    private TimedItemMenu menu;
     private BukkitTask expiryTask;
     private BukkitTask actionbarTask;
 
     @Override
     public void onEnable() {
+        PdcCompat.init(this);
         config = new PluginConfig(this);
         config.load();
         listener = new ExpiryListener(this);
         Bukkit.getPluginManager().registerEvents(listener, this);
+        menu = new TimedItemMenu(this);
+        Bukkit.getPluginManager().registerEvents(menu, this);
         PluginCommand command = getCommand("timeditem");
         if (command != null) {
             command.setExecutor(new TimedItemCommand(this));
         }
+        TimedItemAPI.init(this);
         startTasks();
         if (config.isMetricsEnabled()) {
             new Metrics(this, BSTATS_PLUGIN_ID);
         }
+        hookPlaceholderApi();
         getLogger().info("TimedItem enabled - timed items expire when their timer runs out.");
+    }
+
+    private void hookPlaceholderApi() {
+        if (!Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            return;
+        }
+        try {
+            new TimedItemExpansion(this).register();
+            getLogger().info("Hooked into PlaceholderAPI (%timeditem_...% placeholders).");
+        } catch (Throwable t) {
+            getLogger().warning("Failed to hook PlaceholderAPI: " + t);
+        }
+    }
+
+    public TimedItemMenu menu() {
+        return menu;
     }
 
     @Override
