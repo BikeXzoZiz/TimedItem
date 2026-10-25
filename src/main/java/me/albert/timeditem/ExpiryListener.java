@@ -11,6 +11,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -58,12 +59,20 @@ public final class ExpiryListener implements Listener {
         if (player.getGameMode() == GameMode.CREATIVE) {
             return;
         }
-        ItemStack item = event.getCurrentItem();
-        if (item == null || item.getType() == Material.AIR) {
-            return;
-        }
         boolean allowStart = plugin.pluginConfig().isStartDateCalculateOnClick();
-        process(item, player, allowStart, () -> event.setCurrentItem(null), false);
+        ItemStack item = event.getCurrentItem();
+        if (item != null && item.getType() != Material.AIR) {
+            process(item, player, allowStart, () -> event.setCurrentItem(null), false);
+        }
+        if (event.getAction() == InventoryAction.HOTBAR_SWAP) {
+            // The item leaving the hotbar lands in the clicked slot only
+            // after the event applies, so re-check the inventory next tick.
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (player.isOnline()) {
+                    scanInventory(player, allowStart);
+                }
+            });
+        }
     }
 
     @EventHandler
@@ -167,13 +176,13 @@ public final class ExpiryListener implements Listener {
         }
     }
 
-    /** One-time message + sound when an item enters its final warning window. */
+    /** Message + sound when an item crosses one of its warning stages. */
     private void warnIfNeeded(Player player, TimeLore.TimerInfo info, PluginConfig config, LocalDateTime now) {
         if (!config.isWarningEnabled() || info.getType() != TimeLore.Type.EXPIRE || info.getExpiry() == null) {
             return;
         }
         long remaining = Duration.between(now, info.getExpiry()).getSeconds();
-        if (remaining <= 0 || remaining > config.getWarningSeconds()) {
+        if (remaining <= 0) {
             return;
         }
         Set<String> playerWarned = warned.get(player.getUniqueId());
@@ -181,9 +190,11 @@ public final class ExpiryListener implements Listener {
             playerWarned = new HashSet<String>();
             warned.put(player.getUniqueId(), playerWarned);
         }
-        if (!playerWarned.add(info.getLine())) {
-            return; // already warned about this item
+        int stage = Warnings.nextStage(remaining, config.getWarningStages(), playerWarned, info.getLine());
+        if (stage < 0) {
+            return; // not inside any stage window, or already warned about it
         }
+        playerWarned.add(Warnings.key(info.getLine(), stage));
         player.sendMessage(config.getPrefix()
                 + config.getExpireSoon().replace("{time}", TimeLore.formatDuration(remaining, config)));
         player.playSound(player.getLocation(), config.getWarningSound(),
@@ -220,18 +231,19 @@ public final class ExpiryListener implements Listener {
     }
 
     /**
-     * Shared expiry routine for every context. Fires the cancellable
-     * {@link ItemExpireEvent} first; when cancelled nothing happens and
-     * false is returned. Player-bound effects only run when a player is
-     * involved (ground expiry has no message/sound of its own).
+     * Shared expiry routine for every player-bound context. Fires the
+     * cancellable {@link ItemExpireEvent} first; when cancelled nothing
+     * happens and false is returned. Records the item in the recovery
+     * log before removal.
      */
-    public static boolean expireNow(ItemStack item, Player player, Runnable removal, boolean armor,
-                                    PluginConfig config) {
+    public boolean expireNow(ItemStack item, Player player, Runnable removal, boolean armor,
+                             PluginConfig config) {
         ItemExpireEvent event = new ItemExpireEvent(item, player);
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) {
             return false;
         }
+        plugin.recoveryStore().record(item, player, player == null ? null : player.getWorld());
         removal.run();
         if (player == null) {
             return true;

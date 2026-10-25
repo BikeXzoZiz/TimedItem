@@ -72,18 +72,34 @@ public final class TimedItemAPI {
         return seconds >= 0 ? seconds : null;
     }
 
-    /** Stamps a lifetime on the item (starts counting on first use, per config). */
+    /**
+     * Stamps a lifetime on the item (starts counting on first use, per config).
+     *
+     * @throws IllegalArgumentException when seconds is not positive or the
+     *         item's material is blacklisted (Settings.blacklist.materials)
+     */
     public static void setLifetime(ItemStack item, long seconds) {
         if (seconds <= 0) {
             throw new IllegalArgumentException("seconds must be positive");
         }
+        if (TimeLore.isBlacklisted(item, config())) {
+            throw new IllegalArgumentException("material is blacklisted: " + item.getType());
+        }
         TimeLore.applyLifetime(item, config(), seconds);
     }
 
-    /** Stamps a concrete expiry date {seconds} from now, replacing any timer. */
+    /**
+     * Stamps a concrete expiry date {seconds} from now, replacing any timer.
+     *
+     * @throws IllegalArgumentException when seconds is not positive or the
+     *         item's material is blacklisted (Settings.blacklist.materials)
+     */
     public static void setExpiryFromNow(ItemStack item, long seconds) {
         if (seconds <= 0) {
             throw new IllegalArgumentException("seconds must be positive");
+        }
+        if (TimeLore.isBlacklisted(item, config())) {
+            throw new IllegalArgumentException("material is blacklisted: " + item.getType());
         }
         TimeLore.applyExpiry(item, config(), seconds);
     }

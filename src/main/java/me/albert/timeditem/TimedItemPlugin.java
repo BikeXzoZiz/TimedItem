@@ -16,6 +16,9 @@ public final class TimedItemPlugin extends JavaPlugin {
     private PluginConfig config;
     private ExpiryListener listener;
     private TimedItemMenu menu;
+    private UpdateChecker updateChecker;
+    private RecoveryStore recoveryStore;
+    private RestoreMenu restoreMenu;
     private BukkitTask expiryTask;
     private BukkitTask actionbarTask;
 
@@ -28,12 +31,20 @@ public final class TimedItemPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(listener, this);
         menu = new TimedItemMenu(this);
         Bukkit.getPluginManager().registerEvents(menu, this);
+        recoveryStore = new RecoveryStore(this);
+        recoveryStore.load();
+        restoreMenu = new RestoreMenu(this);
+        Bukkit.getPluginManager().registerEvents(restoreMenu, this);
         PluginCommand command = getCommand("timeditem");
         if (command != null) {
             command.setExecutor(new TimedItemCommand(this));
+            command.setTabCompleter(new TimedItemTabCompleter());
         }
         TimedItemAPI.init(this);
         startTasks();
+        updateChecker = new UpdateChecker(this);
+        Bukkit.getPluginManager().registerEvents(updateChecker, this);
+        updateChecker.check();
         if (config.isMetricsEnabled()) {
             new Metrics(this, BSTATS_PLUGIN_ID);
         }
@@ -55,6 +66,14 @@ public final class TimedItemPlugin extends JavaPlugin {
 
     public TimedItemMenu menu() {
         return menu;
+    }
+
+    public RecoveryStore recoveryStore() {
+        return recoveryStore;
+    }
+
+    public RestoreMenu restoreMenu() {
+        return restoreMenu;
     }
 
     @Override

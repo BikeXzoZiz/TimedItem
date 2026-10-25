@@ -1,13 +1,16 @@
 package me.albert.timeditem;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Typed cache of config.yml. Every key has a default so a missing or
@@ -35,6 +38,13 @@ public final class PluginConfig {
     private String timeSet;
     private String infoRemaining;
     private String infoLifetime;
+    private String giveSent;
+    private String giveReceived;
+    private String targetNotFound;
+    private String materialBlacklisted;
+    private String restoreGiven;
+    private String restoreEmpty;
+    private String updateAvailable;
 
     private String expiresAtPrefix;
     private String usefulLifePrefix;
@@ -53,6 +63,7 @@ public final class PluginConfig {
     private boolean scanWorldItems;
     private boolean warningEnabled;
     private int warningSeconds;
+    private List<Integer> warningStages;
     private String warningSound;
     private float warningVolume;
     private float warningPitch;
@@ -66,6 +77,12 @@ public final class PluginConfig {
     private String soundName;
     private float soundVolume;
     private float soundPitch;
+    private boolean updateCheckEnabled;
+    private String updateCheckRepository;
+    private boolean recoveryEnabled;
+    private int recoveryMaxItems;
+    private int recoveryKeepDays;
+    private Set<Material> blacklistedMaterials;
 
     public PluginConfig(TimedItemPlugin plugin) {
         this.plugin = plugin;
@@ -74,7 +91,7 @@ public final class PluginConfig {
     public void load() {
         plugin.saveDefaultConfig();
         FileConfiguration raw = plugin.getConfig();
-        raw.addDefault("config-version", 4);
+        raw.addDefault("config-version", 5);
         raw.addDefault("Messages.prefix", "&6[TimedItem] &r");
         raw.addDefault("Messages.expire", "&cYour item has expired and was removed!");
         raw.addDefault("Messages.expire_soon", "&eYour item will expire in &c{time}&e!");
@@ -89,11 +106,18 @@ public final class PluginConfig {
         raw.addDefault("Messages.already_paused", "&7The timer on this item is already paused.");
         raw.addDefault("Messages.already_running", "&7The timer on this item is already running.");
         raw.addDefault("Messages.invalid_usage",
-                "&cUsage: /ti set <time>, /ti add <time>, /ti pause, /ti resume, /ti remove, /ti info, /ti reload");
+                "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload");
         raw.addDefault("Messages.config_reload", "&aTimedItem config reloaded.");
         raw.addDefault("Messages.time_set", "&aTimer set: &e{time}");
         raw.addDefault("Messages.info_remaining", "&7Time remaining: &e{time}");
         raw.addDefault("Messages.info_lifetime", "&7Lifetime: &e{time} &7(starts on first use)");
+        raw.addDefault("Messages.give_sent", "&aGave a timed item (&e{time}&a) to &e{player}&a.");
+        raw.addDefault("Messages.give_received", "&aYou received a timed item expiring in &e{time}&a.");
+        raw.addDefault("Messages.target_not_found", "&cPlayer &e{player} &cis not online.");
+        raw.addDefault("Messages.material_blacklisted", "&cThis item's material cannot carry a TimedItem timer.");
+        raw.addDefault("Messages.restore_given", "&aRecovered the item from the expiry log.");
+        raw.addDefault("Messages.restore_empty", "&7The expiry recovery log is empty.");
+        raw.addDefault("Messages.update_available", "&eTimedItem &6{version} &eis available: &7{url}");
         raw.addDefault("DateFormat.expires_at", "&cExpires: ");
         raw.addDefault("DateFormat.useful_life", "&7Lifetime: ");
         raw.addDefault("DateFormat.paused", "&7Paused: ");
@@ -109,6 +133,7 @@ public final class PluginConfig {
         raw.addDefault("Settings.expire_check.scan_world_items", false);
         raw.addDefault("Settings.warning.enabled", true);
         raw.addDefault("Settings.warning.seconds", 60);
+        raw.addDefault("Settings.warning.stages", Collections.singletonList(60));
         raw.addDefault("Settings.warning.sound.name", "block.note_block.pling");
         raw.addDefault("Settings.warning.sound.volume", 1.0);
         raw.addDefault("Settings.warning.sound.pitch", 1.5);
@@ -122,6 +147,12 @@ public final class PluginConfig {
         raw.addDefault("Settings.sound.name", "entity.blaze.death");
         raw.addDefault("Settings.sound.volume", 10.0);
         raw.addDefault("Settings.sound.pitch", 1.2);
+        raw.addDefault("Settings.update_check.enabled", true);
+        raw.addDefault("Settings.update_check.repository", "BikeXzoZiz/TimedItem");
+        raw.addDefault("Settings.recovery.enabled", true);
+        raw.addDefault("Settings.recovery.max_items", 500);
+        raw.addDefault("Settings.recovery.keep_days", 7);
+        raw.addDefault("Settings.blacklist.materials", new java.util.ArrayList<String>());
         raw.options().copyDefaults(true);
         plugin.saveConfig();
 
@@ -143,6 +174,13 @@ public final class PluginConfig {
         timeSet = color(raw.getString("Messages.time_set"));
         infoRemaining = color(raw.getString("Messages.info_remaining"));
         infoLifetime = color(raw.getString("Messages.info_lifetime"));
+        giveSent = color(raw.getString("Messages.give_sent"));
+        giveReceived = color(raw.getString("Messages.give_received"));
+        targetNotFound = color(raw.getString("Messages.target_not_found"));
+        materialBlacklisted = color(raw.getString("Messages.material_blacklisted"));
+        restoreGiven = color(raw.getString("Messages.restore_given"));
+        restoreEmpty = color(raw.getString("Messages.restore_empty"));
+        updateAvailable = color(raw.getString("Messages.update_available"));
 
         expiresAtPrefix = color(raw.getString("DateFormat.expires_at"));
         usefulLifePrefix = color(raw.getString("DateFormat.useful_life"));
@@ -167,6 +205,20 @@ public final class PluginConfig {
         scanWorldItems = raw.getBoolean("Settings.expire_check.scan_world_items", false);
         warningEnabled = raw.getBoolean("Settings.warning.enabled", true);
         warningSeconds = Math.max(1, raw.getInt("Settings.warning.seconds", 60));
+        // Multiple thresholds fire one warning each as the item counts
+        // down (e.g. [600, 60, 10]); an empty list falls back to
+        // Settings.warning.seconds so old configs keep working.
+        List<Integer> stages = new java.util.ArrayList<Integer>();
+        for (int stage : raw.getIntegerList("Settings.warning.stages")) {
+            if (stage > 0 && !stages.contains(stage)) {
+                stages.add(stage);
+            }
+        }
+        if (stages.isEmpty()) {
+            stages.add(warningSeconds);
+        }
+        Collections.sort(stages, Collections.reverseOrder());
+        warningStages = Collections.unmodifiableList(stages);
         warningSound = raw.getString("Settings.warning.sound.name");
         warningVolume = (float) raw.getDouble("Settings.warning.sound.volume", 1.0);
         warningPitch = (float) raw.getDouble("Settings.warning.sound.pitch", 1.5);
@@ -180,6 +232,23 @@ public final class PluginConfig {
         soundName = raw.getString("Settings.sound.name");
         soundVolume = (float) raw.getDouble("Settings.sound.volume", 10.0);
         soundPitch = (float) raw.getDouble("Settings.sound.pitch", 1.2);
+        updateCheckEnabled = raw.getBoolean("Settings.update_check.enabled", true);
+        String repository = raw.getString("Settings.update_check.repository", "BikeXzoZiz/TimedItem");
+        updateCheckRepository = repository == null || repository.trim().isEmpty()
+                ? "BikeXzoZiz/TimedItem" : repository.trim();
+        recoveryEnabled = raw.getBoolean("Settings.recovery.enabled", true);
+        recoveryMaxItems = Math.max(1, raw.getInt("Settings.recovery.max_items", 500));
+        recoveryKeepDays = Math.max(1, raw.getInt("Settings.recovery.keep_days", 7));
+        Set<Material> blacklisted = new HashSet<Material>();
+        for (String name : raw.getStringList("Settings.blacklist.materials")) {
+            Material material = Material.matchMaterial(name);
+            if (material == null) {
+                plugin.getLogger().warning("Ignoring unknown blacklisted material: " + name);
+            } else {
+                blacklisted.add(material);
+            }
+        }
+        blacklistedMaterials = Collections.unmodifiableSet(blacklisted);
     }
 
     public static String color(String text) {
@@ -258,6 +327,34 @@ public final class PluginConfig {
         return infoLifetime;
     }
 
+    public String getGiveSent() {
+        return giveSent;
+    }
+
+    public String getGiveReceived() {
+        return giveReceived;
+    }
+
+    public String getTargetNotFound() {
+        return targetNotFound;
+    }
+
+    public String getMaterialBlacklisted() {
+        return materialBlacklisted;
+    }
+
+    public String getRestoreGiven() {
+        return restoreGiven;
+    }
+
+    public String getRestoreEmpty() {
+        return restoreEmpty;
+    }
+
+    public String getUpdateAvailable() {
+        return updateAvailable;
+    }
+
     public String getExpiresAtPrefix() {
         return expiresAtPrefix;
     }
@@ -323,6 +420,11 @@ public final class PluginConfig {
         return warningSeconds;
     }
 
+    /** Warning thresholds in seconds, highest first. */
+    public List<Integer> getWarningStages() {
+        return warningStages;
+    }
+
     public String getWarningSound() {
         return warningSound;
     }
@@ -373,5 +475,30 @@ public final class PluginConfig {
 
     public float getSoundPitch() {
         return soundPitch;
+    }
+
+    public boolean isUpdateCheckEnabled() {
+        return updateCheckEnabled;
+    }
+
+    public String getUpdateCheckRepository() {
+        return updateCheckRepository;
+    }
+
+    public boolean isRecoveryEnabled() {
+        return recoveryEnabled;
+    }
+
+    public int getRecoveryMaxItems() {
+        return recoveryMaxItems;
+    }
+
+    public int getRecoveryKeepDays() {
+        return recoveryKeepDays;
+    }
+
+    /** Materials that may never receive a timer. */
+    public Set<Material> blacklistedMaterials() {
+        return blacklistedMaterials;
     }
 }

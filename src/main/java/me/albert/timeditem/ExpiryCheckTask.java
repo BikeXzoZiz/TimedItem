@@ -104,6 +104,7 @@ public final class ExpiryCheckTask implements Runnable {
         if (event.isCancelled()) {
             return false;
         }
+        plugin.recoveryStore().record(stack, null, entity.getWorld());
         Location center = entity.getLocation();
         Player nearby = ExpiryListener.nearestPlayer(center, 20.0);
         // remove first so the sound/particle reads as the item vanishing
@@ -113,6 +114,15 @@ public final class ExpiryCheckTask implements Runnable {
         }
         if (config.isParticleEnabled() && nearby != null) {
             ParticleCompat.spawnAt(nearby, center, config.getParticleName(), config.getParticleCount());
+        }
+        for (String command : config.getExpiryCommands()) {
+            if (command.contains("{player}")) {
+                continue; // ground expiry has no player to substitute
+            }
+            String cmd = command.startsWith("/") ? command.substring(1) : command;
+            if (!cmd.isEmpty()) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+            }
         }
         return true;
     }

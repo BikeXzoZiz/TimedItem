@@ -85,6 +85,14 @@ class TimeLoreTest {
     }
 
     @Test
+    void malformedExpireLineDoesNotHideLaterLines() {
+        TimeLore.TimerInfo info = analyze("Expires: §snot-a-date", "Lifetime: §s600§s10m");
+        assertNotNull(info);
+        assertEquals(TimeLore.Type.LIFETIME, info.getType());
+        assertEquals(600L, info.getSeconds());
+    }
+
+    @Test
     void untimedLoreReturnsNull() {
         assertNull(analyze());
         assertNull(analyze("Sharpness V", "Some other lore"));

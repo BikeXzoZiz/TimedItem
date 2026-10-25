@@ -8,7 +8,7 @@ softdepend: [PlaceholderAPI]
 commands:
   timeditem:
     description: Manage timed items
-    usage: /<command> set <time> | add <time> | pause | resume | remove | info | menu | reload
+    usage: /<command> set <time> | add <time> | give <player> <time> [amount] | pause | resume | remove | info | menu | restore | reload
     aliases: [ti]
     permission: timeditem.admin
     permission-message: §cYou do not have permission to use TimedItem.

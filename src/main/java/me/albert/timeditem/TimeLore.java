@@ -114,7 +114,7 @@ public final class TimeLore {
                     try {
                         return new TimerInfo(Type.EXPIRE, LocalDateTime.parse(parts[1], LORE_FORMAT), -1L, line);
                     } catch (DateTimeParseException ignored) {
-                        return null;
+                        continue; // malformed expire line - try the remaining lines
                     }
                 }
             } else if (line.startsWith(lifePrefix)) {
@@ -209,6 +209,11 @@ public final class TimeLore {
     /** Removes any timer from the item. */
     public static void removeTimer(ItemStack item, PluginConfig config) {
         write(item, config, null, -1L);
+    }
+
+    /** True when the item's material is on the blacklist (Settings.blacklist.materials). */
+    public static boolean isBlacklisted(ItemStack item, PluginConfig config) {
+        return item != null && config.blacklistedMaterials().contains(item.getType());
     }
 
     /** Human readable duration using the configured unit labels, e.g. "1d12h30m". */

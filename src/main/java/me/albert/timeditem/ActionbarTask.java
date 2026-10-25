@@ -11,7 +11,9 @@ import java.time.LocalDateTime;
 
 /**
  * Shows the remaining time of the held timed item in the actionbar,
- * refreshed once per second.
+ * refreshed once per second. Covers every timer type: counting
+ * down (EXPIRE), frozen remaining time (PAUSED) and the not-yet-started
+ * lifetime total (LIFETIME).
  */
 public final class ActionbarTask implements Runnable {
 
@@ -39,14 +41,19 @@ public final class ActionbarTask implements Runnable {
             if (item == null || item.getType() == Material.AIR) {
                 continue;
             }
-            if (TimeLore.typeOf(item, config) != TimeLore.Type.EXPIRE) {
+            TimeLore.TimerInfo info = TimeLore.analyze(item, config);
+            if (info == null) {
                 continue;
             }
-            LocalDateTime expiry = TimeLore.expiryOf(item, config);
-            if (expiry == null) {
+            long remaining;
+            if (info.getType() == TimeLore.Type.EXPIRE && info.getExpiry() != null) {
+                remaining = Duration.between(LocalDateTime.now(), info.getExpiry()).getSeconds();
+            } else if (info.getType() == TimeLore.Type.PAUSED
+                    || info.getType() == TimeLore.Type.LIFETIME) {
+                remaining = info.getSeconds();
+            } else {
                 continue;
             }
-            long remaining = Duration.between(LocalDateTime.now(), expiry).getSeconds();
             if (remaining < 0) {
                 remaining = 0;
             }

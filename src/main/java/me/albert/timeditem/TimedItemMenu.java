@@ -146,6 +146,10 @@ public final class TimedItemMenu implements Listener {
         if (item == null) {
             return;
         }
+        if (TimeLore.isBlacklisted(item, config)) {
+            player.sendMessage(config.getPrefix() + config.getMaterialBlacklisted());
+            return;
+        }
         TimeLore.applyLifetime(item, config, seconds);
         if (!config.isStartDateCalculateOnClick()) {
             TimeLore.startLifetime(item, config, player);

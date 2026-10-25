@@ -1,4 +1,4 @@
-# TimedItem 2.2
+# TimedItem 2.3
 
 Give items a lifetime — they expire (and disappear) when the timer runs out.
 
@@ -23,7 +23,7 @@ Licensed under the [MIT License](LICENSE).
 mvn package
 ```
 
-ได้ไฟล์ `target/TimedItem-2.2.0.jar` (unit tests 18 ตัวรันอัตโนมัติระหว่าง build)
+ได้ไฟล์ `target/TimedItem-2.3.0.jar` (unit tests 31 ตัวรันอัตโนมัติระหว่าง build)
 
 **CI:** GitHub Actions build ให้อัตโนมัติ — ทุก push/PR ได้ artifact (workflow *Build*) และทุกครั้งที่ push tag `v*` จะ build jar แนบเข้า Release ให้เอง (workflow *Release*)
 
@@ -33,12 +33,16 @@ mvn package
 |---|---|
 | `/ti set <เวลา>` | ประทับเวลาบนไอเทมที่ถือ เช่น `/ti set 1d12h30m` หรือแบบเก่า `/ti set 120 s` |
 | `/ti add <เวลา>` | ต่อเวลา — ทำงานกับทั้งไอเทมที่เริ่มนับแล้ว, ยังไม่เริ่ม และ paused |
+| `/ti give <ผู้เล่น> <เวลา> [จำนวน]` | หยิบไอเทมในมือ ตั้งเวลาหมดอายุจากตอนนี้ แล้วส่งให้ผู้เล่นเป้าหมายทันที (default 1 ชิ้น, หักจากมือผู้ส่ง) |
 | `/ti pause` | หยุดเวลาชั่วคราว — ไอเทมไม่หมดอายุระหว่างหยุด |
 | `/ti resume` | เดินเวลาต่อจากเดิม |
 | `/ti remove` | ถอด timer ออกจากไอเทมที่ถือ |
 | `/ti info` | ดูเวลาที่เหลือ / lifetime / เวลาที่หยุดไว้ |
 | `/ti menu` | เปิด GUI — กด preset เวลา / pause-resume / remove ทำงานกับไอเทมที่ถือ |
+| `/ti restore [หน้า]` | เปิด GUI ไอเทมที่หมดอายุไปแล้วล่าสุด — คลิกเพื่อรับคืน (มาจาก recovery log) |
 | `/ti reload` | โหลด config ใหม่ (task ต่าง ๆ เริ่มใหม่ตาม config ด้วย) |
+
+ทุกคำสั่งมี **Tab completion** (ชื่อคำสั่ง, ตัวอย่างเวลา, ชื่อผู้เล่นออนไลน์, เลขหน้า)
 
 หน่วยเวลา (ปรับได้ใน config): `s` วินาที, `m` นาที, `h` ชั่วโมง, `d` วัน — ใส่รวมหลายหน่วยได้ เช่น `2d6h`
 
@@ -46,9 +50,9 @@ mvn package
 
 ตรวจจาก: periodic check ทุก 10 วิ (ปรับ/ปิดได้) · คลิกใน inventory · ใช้/คลิกขวา · เข้าเซิร์ฟ · โดนดาเมจ (เกราะ) · **หยิบไอเทมจากพื้น** · และเลือกได้ว่าให้สแกนไอเทมบนพื้น/ใน item frame/บน armor stand เป็นรอบด้วย (`Settings.expire_check.scan_world_items`, default ปิดเพราะแพง)
 
-เมื่อหมดอายุ: ลบไอเทม → เสียง → particle → ข้อความ → รัน `expiry_commands` (ถ้ามี) และถ้าเป็นเกราะเพิ่ม max health จะรีเซ็ตเป็น 20 (เฉพาะเมื่อค่าปัจจุบันเกิน 20)
+เมื่อหมดอายุ: ลบไอเทม → บันทึกลง recovery log (ถ้าเปิด) → เสียง → particle → ข้อความ → รัน `expiry_commands` (ถ้ามี) และถ้าเป็นเกราะเพิ่ม max health จะรีเซ็ตเป็น 20 (เฉพาะเมื่อค่าปัจจุบันเกิน 20) — กรณีหมดอายุบนพื้น/เฟรม คำสั่งที่มี `{player}` จะถูกข้ามเพราะไม่มีผู้เล่นอ้างอิง
 
-**เตือนล่วงหน้า:** ข้อความ + เสียง 1 ครั้งเมื่อเข้าสู่หน้าต่างเตือน (default 60 วิสุดท้าย, ต้องเปิด expire_check)
+**เตือนล่วงหน้าหลายระยะ:** ข้อความ + เสียงตามเกณฑ์ใน `Settings.warning.stages` (default `[60]` เหมือนเดิม) — ตั้งหลายขั้นได้ เช่น `[600, 60, 10]` = เตือนตอนเหลือ 10 นาที, 1 นาที และ 10 วินาที ครั้งละหนึ่งขั้นเรียงจากมากไปน้อย (ต้องเปิด expire_check)
 
 ## การจัดเก็บข้อมูล timer (สำคัญ)
 
@@ -59,11 +63,14 @@ mvn package
 
 - `Settings.start_date_calculate_on_click` — `true` = เริ่มนับเมื่อคลิก/ใช้ครั้งแรก, `false` = เริ่มทันทีตอน set
 - `Settings.expire_check.enabled` / `interval_seconds` / `scan_world_items`
-- `Settings.warning.*` — เตือนล่วงหน้า (เปิด/ปิด, กี่วินาที, เสียง)
+- `Settings.warning.*` — เตือนล่วงหน้า (เปิด/ปิด, `stages` หลายระยะ, `seconds` ใช้เมื่อ `stages` ว่าง, เสียง)
 - `Settings.particles.*` — particle ตอนหมดอายุ (ชื่อไม่รู้จัก fallback เป็น FLAME)
-- `Settings.expiry_commands` — คำสั่ง console ตอนหมดอายุ (มี `{player}`)
-- `Settings.actionbar.*` — countdown บน actionbar ตอนถือไอเทม
+- `Settings.expiry_commands` — คำสั่ง console ตอนหมดอายุ (มี `{player}`; บนพื้น/เฟรมจะข้ามคำสั่งที่มี `{player}`)
+- `Settings.actionbar.*` — countdown บน actionbar ตอนถือไอเทม (ครอบคลุมทุกประเภท: นับอยู่ / paused / lifetime ที่ยังไม่เริ่ม)
 - `Settings.sound.*` — เสียงตอนหมดอายุ (sound key, ดู [Sounds.json](https://minecraft.wiki/w/Sounds.json))
+- `Settings.recovery.*` — บันทึกไอเทมที่หมดอายุลง `plugins/TimedItem/recovery.log` เพื่อกู้คืนด้วย `/ti restore` (เปิด default, เก็บสูงสุด 500 รายการ / 7 วัน — ปรับได้)
+- `Settings.blacklist.materials` — material ที่ห้ามติดตั้ง timer (เช่น `[TOTEM_OF_UNDYING]`) — บังคับที่ `/ti set`, `/ti add`, `/ti give`, `/ti menu` และ Developer API; ไอเทมที่มี timer อยู่แล้วไม่ถูกกระทบ
+- `Settings.update_check.*` — เช็คเวอร์ชันใหม่จาก GitHub Releases (`enabled`, `repository` เป็น `owner/name`) แจ้งคอนโซล + แอดมินตอน join
 - `Settings.metrics` — bStats anonymous statistics
 - `Messages.*` / `DateFormat.*` — ข้อความและ lore (ห้ามแก้ DateFormat หลังมีไอเทมอยู่, หลีกเลี่ยง `&s` ท้าย prefix)
 
@@ -93,8 +100,8 @@ public void onStart(ItemTimerStartEvent event) { ... }  // lifetime เริ่
 TimedItemAPI.isTimed(item)          // มี timer ไหม
 TimedItemAPI.getType(item)          // "expire" | "lifetime" | "paused" | null
 TimedItemAPI.getRemainingSeconds(item)
-TimedItemAPI.setLifetime(item, 3600)
-TimedItemAPI.setExpiryFromNow(item, 600)
+TimedItemAPI.setLifetime(item, 3600)      // throw IllegalArgumentException ถ้า material อยู่ใน blacklist
+TimedItemAPI.setExpiryFromNow(item, 600)  // เช่นเดียวกัน
 TimedItemAPI.pause(item) / resume(item) / clear(item)
 ```
 
@@ -108,11 +115,12 @@ expiry_commands:
 ```
 (ชื่อ channel ตาม config ของ DiscordSRV — วิธีนี้ยังใช้กับ plugin อื่นที่มี console command ได้ด้วย)
 
-## ทุกเวอร์ชันเก่า → 2.2
+## ทุกเวอร์ชันเก่า → 2.3
 
 - ไอเทม v1/v2.0/v2.1 ยังทำงาน (อ่านจาก lore อัตโนมัติ, ครั้งถัดไปที่แก้ไขจะย้ายเข้า PDC เอง)
-- config เก่าอัปเกรดอัตโนมัติ (key ขาดเติม default ให้)
+- config เก่าอัปเกรดอัตโนมัติ (key ขาดเติม default ให้) — `warning.seconds` ยังใช้ได้ถ้าไม่ตั้ง `stages`
 - v2.2 เพิ่ม: PDC storage, GUI menu, event API + facade, PlaceholderAPI, หมดอายุบนพื้น/เฟรม, unit tests, MIT License
+- v2.3 เพิ่ม: Tab completion, `/ti give`, ระบบกู้คืนไอเทม (`/ti restore` + recovery.log), เตือนหลายระยะ (`warning.stages`), blacklist material, update checker, actionbar ครบทุกประเภท timer, `expiry_commands` ทำงานตอนหมดอายุบนพื้นด้วย, แก้จุดบอด hotbar-swap และ lore line เสียบังบรรทัดอื่น
 
 ## เทคนิค (สำหรับคนดูแลโค้ด)
 

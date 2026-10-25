@@ -1,5 +1,6 @@
 package me.albert.timeditem;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -10,6 +11,7 @@ import org.bukkit.inventory.ItemStack;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.Map;
 
 public final class TimedItemCommand implements CommandExecutor {
 
@@ -29,6 +31,7 @@ public final class TimedItemCommand implements CommandExecutor {
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals("reload")) {
             config.load();
+            plugin.recoveryStore().load();
             plugin.startTasks();
             sender.sendMessage(config.getPrefix() + config.getConfigReload());
             return true;
@@ -61,6 +64,10 @@ public final class TimedItemCommand implements CommandExecutor {
             }
             return true;
         }
+        if (sub.equals("give")) {
+            handleGive(sender, args, config);
+            return true;
+        }
         if (sub.equals("menu")) {
             Player player = requirePlayer(sender, config);
             if (player != null) {
@@ -75,6 +82,26 @@ public final class TimedItemCommand implements CommandExecutor {
                 if (item != null) {
                     TimeLore.removeTimer(item, config);
                     player.sendMessage(config.getPrefix() + config.getItemCleared());
+                }
+            }
+            return true;
+        }
+        if (sub.equals("restore")) {
+            Player player = requirePlayer(sender, config);
+            if (player != null) {
+                RecoveryStore store = plugin.recoveryStore();
+                if (store.size() == 0) {
+                    player.sendMessage(config.getPrefix() + config.getRestoreEmpty());
+                } else {
+                    int page = 0;
+                    if (args.length >= 2) {
+                        try {
+                            page = Integer.parseInt(args[1]) - 1;
+                        } catch (NumberFormatException ignored) {
+                            page = 0;
+                        }
+                    }
+                    plugin.restoreMenu().open(player, page);
                 }
             }
             return true;
@@ -105,6 +132,10 @@ public final class TimedItemCommand implements CommandExecutor {
             player.sendMessage(config.getPrefix() + config.getInvalidUsage());
             return;
         }
+        if (TimeLore.isBlacklisted(item, config)) {
+            player.sendMessage(config.getPrefix() + config.getMaterialBlacklisted());
+            return;
+        }
         TimeLore.applyLifetime(item, config, seconds);
         if (!config.isStartDateCalculateOnClick()) {
             TimeLore.startLifetime(item, config);
@@ -129,6 +160,10 @@ public final class TimedItemCommand implements CommandExecutor {
         long delta = parseDuration(args, config);
         if (delta <= 0) {
             player.sendMessage(config.getPrefix() + config.getInvalidUsage());
+            return;
+        }
+        if (TimeLore.isBlacklisted(item, config)) {
+            player.sendMessage(config.getPrefix() + config.getMaterialBlacklisted());
             return;
         }
         TimeLore.Type type = TimeLore.typeOf(item, config);
@@ -165,6 +200,75 @@ public final class TimedItemCommand implements CommandExecutor {
                     .replace("{time}", TimeLore.formatDuration(newSeconds, config)));
         } else {
             player.sendMessage(config.getPrefix() + config.getNoTimer());
+        }
+    }
+
+    /**
+     * /ti give <player> <time> [amount] - turns a copy of the held item
+     * into a timed item expiring in <time> and hands it to the target.
+     * The time is one token such as 1d12h (the legacy two-token form is
+     * not supported here because the last argument is the amount).
+     */
+    private void handleGive(CommandSender sender, String[] args, PluginConfig config) {
+        Player player = requirePlayer(sender, config);
+        if (player == null) {
+            return;
+        }
+        if (args.length < 3) {
+            player.sendMessage(config.getPrefix() + config.getInvalidUsage());
+            return;
+        }
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) {
+            player.sendMessage(config.getPrefix()
+                    + config.getTargetNotFound().replace("{player}", args[1]));
+            return;
+        }
+        ItemStack held = mainHand(player, config);
+        if (held == null) {
+            return;
+        }
+        if (TimeLore.isBlacklisted(held, config)) {
+            player.sendMessage(config.getPrefix() + config.getMaterialBlacklisted());
+            return;
+        }
+        long seconds = DurationParser.parse(args[2], config.unitSeconds());
+        if (seconds <= 0) {
+            player.sendMessage(config.getPrefix() + config.getInvalidUsage());
+            return;
+        }
+        int amount = 1;
+        if (args.length >= 4) {
+            try {
+                amount = Integer.parseInt(args[3]);
+            } catch (NumberFormatException e) {
+                player.sendMessage(config.getPrefix() + config.getInvalidUsage());
+                return;
+            }
+        }
+        if (amount < 1 || amount > held.getAmount()) {
+            player.sendMessage(config.getPrefix() + config.getInvalidUsage());
+            return;
+        }
+        ItemStack gift = held.clone();
+        gift.setAmount(amount);
+        TimeLore.applyExpiry(gift, config, seconds);
+        Map<Integer, ItemStack> leftover = target.getInventory().addItem(gift);
+        for (ItemStack rest : leftover.values()) {
+            target.getWorld().dropItemNaturally(target.getLocation(), rest);
+        }
+        if (amount >= held.getAmount()) {
+            player.getInventory().setItemInMainHand(null);
+        } else {
+            held.setAmount(held.getAmount() - amount);
+            player.getInventory().setItemInMainHand(held);
+        }
+        String pretty = TimeLore.formatDuration(seconds, config);
+        player.sendMessage(config.getPrefix() + config.getGiveSent()
+                .replace("{time}", pretty).replace("{player}", target.getName()));
+        if (!target.equals(player)) {
+            target.sendMessage(config.getPrefix() + config.getGiveReceived()
+                    .replace("{time}", pretty));
         }
     }
 
