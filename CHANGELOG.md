@@ -2,6 +2,18 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [2.5.0] - 2026-10-26
+
+### Added
+- **ระบบ Debug & Diagnostics** — `/ti debug [on|off|export]` สำหรับไล่บั๊ก: `on`/`off` เปิด-ปิดโหมด verbose ของ session (รีเซ็ตตาม config ตอน reload/restart), `export` เขียนรายงานบั๊กเป็นไฟล์ `plugins/TimedItem/debug/report-<timestamp>.txt` (สภาพแวดล้อม, settings, สถิติ recovery, log ล่าสุด)
+- **จับ log ในหน่วยความจำ** — ทุก log ของปลั๊กอิน (warning, migration notice, scheduler failure) ถูกเก็บใน ring buffer 500 แถวอัตโนมัติ พร้อมดัมพ์ลงรายงาน โดยไม่ต้องเก็บไฟล์ log แยก
+- **Verbose logging `[Debug]`** — จุดที่เคยหายเงียบมองเห็นได้แล้วเมื่อเปิด debug: PDC เขียน/อ่านไม่สำเร็จ (lore ยังเป็นที่เก็บสำรอง), serializer ตกไปใช้ legacy path, ทุกเหตุการณ์หมดอายุ, การบันทึก recovery (มี dedupe ข้อความซ้ำภายใน 5 วินาที กัน spam จาก hot path)
+- **`Settings.debug`** (default `false`) — ค่า default ของโหมด debug ตอนเริ่มระบบ
+- **Expiry check กัน crash** — periodic scan ที่โยน exception จะถูกจับ log พร้อม throwable เต็ม (debug on → มี stack trace ใน buffer) แล้วทำงานต่อรอบถัดไป
+
+### Privacy
+- รายงาน debug **ไม่มีทาง** มี webhook URL, ข้อมูล item/NBT หรือรายชื่อผู้เล่นจาก recovery — มี unit test คุมไว้ (`DebugReportTest`)
+
 ## [2.4.1] - 2026-10-26
 
 ### Added

@@ -52,7 +52,7 @@
 
 ## 🚀 เริ่มใช้ใน 1 นาที
 
-1. ดาวน์โหลด `TimedItem-2.4.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
+1. ดาวน์โหลด `TimedItem-2.5.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
 2. รีสตาร์ทเซิร์ฟเวอร์ — เสร็จ! (ค่า default ใช้ได้ทันที)
 3. ลองเลย:
 
@@ -81,6 +81,7 @@ Permission ทั้งหมด: `timeditem.admin` (default: op) — ทุก�
 | `/ti info` | ดูเวลาที่เหลือ / lifetime / เวลาที่หยุดไว้ |
 | `/ti menu` | เปิด GUI — preset เวลา / pause-resume / remove / สถานะสด |
 | `/ti restore [หน้า]` | เปิด GUI กู้คืนไอเทมที่หมดอายุไปแล้วล่าสุด — คลิกเพื่อรับคืน |
+| `/ti debug [on\|off\|export]` | เครื่องมือไล่บั๊ก — ดูสถานะ, เปิด/ปิด verbose logging ของ session, หรือเขียนรายงานบั๊กเป็นไฟล์ `plugins/TimedItem/debug/` (ตั้ง default ที่ `Settings.debug`) |
 | `/ti reload` | โหลด config + ไฟล์ภาษาใหม่ (task เริ่มใหม่ตาม config) |
 
 หน่วยเวลา (ปรับได้): `s` วินาที · `m` นาที · `h` ชั่วโมง · `d` วัน — รวมหลายหน่วยได้ เช่น `2d6h`
@@ -119,6 +120,7 @@ Permission ทั้งหมด: `timeditem.admin` (default: op) — ทุก�
 | `Settings.blacklist.materials` | material ที่ห้ามมี timer เช่น `[TOTEM_OF_UNDYING]` — บังคับทุกทางรวม API |
 | `Settings.update_check.*` | เช็คเวอร์ชันใหม่จาก GitHub Releases |
 | `Settings.metrics` | bStats anonymous statistics |
+| `Settings.debug` | verbose `[Debug]` log ในคอนโซล (default `false`) — สลับได้ทันทีด้วย `/ti debug on\|off` |
 | `Messages.*` / `DateFormat.*` / `Gui.*` | อยู่ใน `lang/messages_<language>.yml` ตั้งแต่ 2.4.0 |
 
 > ⚠️ **ห้ามแก้ `DateFormat` หลังมีไอเทมอยู่แล้ว** — prefix เหล่านี้เป็นตัวระบุบรรทัด lore ตอนอ่านค่า และหน่วย `s/m/h/d` ต้องเหมือนกันทุกไฟล์ภาษา
@@ -215,6 +217,7 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 | เวอร์ชัน | สรุป |
 |---|---|
+| **v2.5.0** | ระบบ debug & diagnostics — `/ti debug on\|off\|export` · จับ log 500 แถว · verbose `[Debug]` log · รายงานบั๊ก (ไม่มีข้อมูล webhook URL/item/player) |
 | **v2.4.1** | Ground expiry บน Folia สมบูรณ์ (per-entity scheduler tracking — spawn/chunk load/interact) |
 | **v2.4.0** | Folia support · Discord webhook ในตัว · multi-language (`Settings.language` + `lang/`) · recovery.log เขียนบน background thread · PDC reflection cache · GUI ตามภาษา |
 | **v2.3.1** | รวม expire pipeline เดียว (`ExpiryService`) · recovery.log ข้ามเวอร์ชัน MC ได้ (format tag + auto-migrate) · `ignore_creative` · tab hint `1d12h`/`30d` |
