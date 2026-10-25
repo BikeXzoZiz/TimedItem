@@ -7,7 +7,6 @@
 [![Release](https://img.shields.io/github/v/release/BikeXzoZiz/TimedItem)](https://github.com/BikeXzoZiz/TimedItem/releases)
 [![Minecraft](https://img.shields.io/badge/MC-1.13%E2%80%9326.x-green)](#-folia--ความเข้ากันได้)
 [![Java](https://img.shields.io/badge/Java-8%2B-orange)](#-folia--ความเข้ากันได้)
-[![Build](https://img.shields.io/github/actions/workflow/status/BikeXzoZiz/TimedItem/build.yml?label=build)](https://github.com/BikeXzoZiz/TimedItem/actions)
 [![License](https://img.shields.io/github/license/BikeXzoZiz/TimedItem)](LICENSE)
 [![bStats](https://img.shields.io/bstats/servers/34946)](https://bstats.org/plugin/bukkit/TimedItemRewrite/34946)
 
@@ -64,8 +63,8 @@
 /ti give Steve 30m   # ส่งไอเทม timed ให้ผู้เล่น
 ```
 
-> **Build จากซอร์ส:** ต้องมี JDK 8+ (แนะนำ 17/21) และ Maven → `mvn package` ได้ไฟล์ที่ `target/`
-> **CI:** ทุก push/PR build อัตโนมัติ และ push tag `v*` จะแนบ jar เข้า GitHub Release ให้เอง
+> **Build จากซอร์ส:** ต้องมี JDK 8+ (แนะนำ 17/21) และ Maven → `mvn package` ได้ไฟล์ที่ `target/` (unit tests รันอัตโนมัติระหว่าง build)
+> **การเปิด Release:** สร้าง release ที่ tag `v*` แล้วแนบ jar จาก `target/` ด้วยตนเอง
 
 ## 📖 คำสั่ง
 
