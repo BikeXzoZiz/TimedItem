@@ -20,6 +20,7 @@ public final class TimedItemPlugin extends JavaPlugin {
     private RecoveryStore recoveryStore;
     private RestoreMenu restoreMenu;
     private DiscordWebhook discordWebhook;
+    private FoliaGroundExpiry foliaGroundExpiry;
     private SchedulerCompat.Handle expiryTask;
     private SchedulerCompat.Handle actionbarTask;
 
@@ -38,6 +39,9 @@ public final class TimedItemPlugin extends JavaPlugin {
         // created before the tasks start: on Folia a region thread can
         // expire an item while onEnable is still running
         discordWebhook = new DiscordWebhook(this);
+        if (SchedulerCompat.isFolia()) {
+            foliaGroundExpiry = new FoliaGroundExpiry(this);
+        }
         restoreMenu = new RestoreMenu(this);
         Bukkit.getPluginManager().registerEvents(restoreMenu, this);
         PluginCommand command = getCommand("timeditem");
@@ -59,8 +63,8 @@ public final class TimedItemPlugin extends JavaPlugin {
         }
         hookPlaceholderApi();
         if (SchedulerCompat.isFolia()) {
-            getLogger().info("Folia detected - player expiry runs on the owning region"
-                    + " thread; ground-item scan (scan_world_items) is not available.");
+            getLogger().info("Folia detected - expiry tasks run on the owning region"
+                    + " threads and ground items are tracked per entity.");
         }
         getLogger().info("TimedItem enabled - timed items expire when their timer runs out.");
     }
@@ -107,6 +111,9 @@ public final class TimedItemPlugin extends JavaPlugin {
         if (discordWebhook != null) {
             discordWebhook.close();
         }
+        if (foliaGroundExpiry != null) {
+            foliaGroundExpiry.stop();
+        }
     }
 
     private void cancelTask(SchedulerCompat.Handle handle) {
@@ -128,6 +135,13 @@ public final class TimedItemPlugin extends JavaPlugin {
         }
         if (config.isActionbarEnabled()) {
             actionbarTask = SchedulerCompat.runGlobalTimer(this, 20L, 20L, new ActionbarTask(this));
+        }
+        if (foliaGroundExpiry != null) {
+            // restart so a changed interval applies to every tracking task
+            foliaGroundExpiry.stop();
+            if (config.isScanWorldItems()) {
+                foliaGroundExpiry.start(config.getExpireCheckSeconds() * 20L);
+            }
         }
     }
 

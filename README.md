@@ -202,10 +202,10 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 |---|---|
 | Minecraft **1.13 → 26.3+ (ล่าสุด)** | jar เดียว ใช้ได้ทุกเวอร์ชันในช่วงนี้ |
 | Spigot / Paper / **Purpur** / Pufferfish / Leaf และ forks อื่น ๆ | ทุก fork ที่ใช้ Bukkit API |
-| **Folia** | ✅ ตั้งแต่ 2.4.0 — expire ของผู้เล่นรันบน region thread ของเจ้าของ ถูกต้องตาม threading model |
+| **Folia** | ✅ ตั้งแต่ 2.4.0 — expire ของผู้เล่นรันบน region thread ของเจ้าของ ถูกต้องตาม threading model (ground expiry ครบตั้งแต่ 2.4.1 ผ่าน per-entity tracking) |
 | Java 8 – 25 (ฝั่งเซิร์ฟเวอร์) | compile เป็น Java 8 bytecode |
 
-> **ข้อจำกัดบน Folia:** `scan_world_items` (ตรวจของบนพื้น/เฟรม/armor stand เป็นรอบ) ยังไม่รองรับ — ปลั๊กอินข้ามให้เองและแจ้งใน console ตอน enable; หมดอายุบนพื้นยังทำงานได้ตอนผู้เล่นหยิบตามปกติ
+> **บน Folia:** `scan_world_items` ใช้ per-entity tracking แทนการเดินสแกนทุก world — ไอเทมที่หล่น/ของในเฟรม/บน stand ที่มี timer จะถูกตั้ง repeating check บน entity scheduler ของมันเอง (auto-retire เมื่อของหาย) ข้อจำกัดเดียว: การหมดอายุบนพื้นบน Folia ไม่มีเสียง/particle ให้ผู้เล่นใกล้เคียง (อ่านตำแหน่งข้าม region ไม่ปลอดภัย) — recovery, event และ `expiry_commands` ทำงานปกติ
 
 ## ⬆️ Migration
 
@@ -215,6 +215,7 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 | เวอร์ชัน | สรุป |
 |---|---|
+| **v2.4.1** | Ground expiry บน Folia สมบูรณ์ (per-entity scheduler tracking — spawn/chunk load/interact) |
 | **v2.4.0** | Folia support · Discord webhook ในตัว · multi-language (`Settings.language` + `lang/`) · recovery.log เขียนบน background thread · PDC reflection cache · GUI ตามภาษา |
 | **v2.3.1** | รวม expire pipeline เดียว (`ExpiryService`) · recovery.log ข้ามเวอร์ชัน MC ได้ (format tag + auto-migrate) · `ignore_creative` · tab hint `1d12h`/`30d` |
 | **v2.3.0** | Tab completion · `/ti give` · recovery + restore GUI · warning stages · material blacklist · update checker |
@@ -227,7 +228,7 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 - compile กับ `spigot-api 1.13.2` + `api-version: '1.13'` → jar เดียว 1.13 → 26.x, ไม่แตะ internals
 - `PdcCompat` / `HealthCompat` / `ParticleCompat` resolve ผ่าน reflection (รองรับ enum→interface ทุกจุด: Sound, Attribute, Particle) — Methods ถูก cache ตอน init
-- **Folia:** ตรวจจับผ่าน `RegionizedServer` class — scheduler ทั้งหมดผ่าน `SchedulerCompat` (global region / entity / async scheduler ด้วย reflection); periodic scan กับ actionbar enqueue ต่อผู้เล่นด้วย entity scheduler; recovery store ใช้ lock + snapshot จึงไหวกับหลาย region thread
+- **Folia:** ตรวจจับผ่าน `RegionizedServer` class — scheduler ทั้งหมดผ่าน `SchedulerCompat` (global region / entity / async scheduler ด้วย reflection); periodic scan กับ actionbar enqueue ต่อผู้เล่นด้วย entity scheduler; ground expiry ใช้ `FoliaGroundExpiry` — entity แต่ละตัวถือ repeating check บน scheduler ของตัวเอง (tracked จาก spawn/chunk load/interact, self-cancel เมื่อไม่มี timed item); recovery store ใช้ lock + snapshot จึงไหวกับหลาย region thread
 - ทุกกรณีหมดอายุ (ผู้เล่น / พื้น-เฟรม-stand) ผ่าน `ExpiryService` เส้นเดียวกัน — event, recovery, เอฟเฟกต์ และ `expiry_commands` สม่ำเสมอทั้งสองฝั่ง
 - `TimeLore.analyze` อ่านข้อมูลครั้งเดียวต่อ stack (TimerInfo) — hot path ไม่ copy ItemMeta ซ้ำ
 - recovery.log: line format อยู่ที่ `RecoveryFormat` (pure, unit tested) — decode อยู่ที่ `ItemSerializer.encode/fromBase64`

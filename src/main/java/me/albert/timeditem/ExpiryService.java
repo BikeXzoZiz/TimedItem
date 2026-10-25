@@ -51,7 +51,9 @@ public final class ExpiryService {
         plugin.recoveryStore().record(item, player, world);
         removal.run();
         Player viewer = player;
-        if (viewer == null && effectCenter != null) {
+        if (viewer == null && effectCenter != null && !SchedulerCompat.isFolia()) {
+            // On Folia reading other players' positions cross-region is not
+            // safe, so ground expiry there has no nearby-viewer effects.
             viewer = nearestPlayer(effectCenter, GROUND_EFFECT_RADIUS);
         }
         if (viewer != null && config.isSoundEnabled()) {

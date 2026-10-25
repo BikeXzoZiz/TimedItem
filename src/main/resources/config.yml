@@ -1,4 +1,4 @@
-# TimedItem 2.4.0
+# TimedItem 2.4.1
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 # Messages live in lang/messages_<language>.yml (see Settings.language).
@@ -24,7 +24,7 @@ Settings:
     interval_seconds: 10
     # Also scan ground items, item frames and armor stands for expired
     # items every interval. Off by default - it walks every loaded world.
-    # (Not available on Folia.)
+    # (On Folia this uses per-entity tracking instead of a world scan.)
     scan_world_items: false
     # true  = creative players are skipped entirely: their timed items
     #         neither expire nor show a countdown/warnings.

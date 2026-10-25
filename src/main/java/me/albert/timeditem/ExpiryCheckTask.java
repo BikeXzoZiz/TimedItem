@@ -36,7 +36,8 @@ public final class ExpiryCheckTask implements Runnable {
         PluginConfig config = plugin.pluginConfig();
         if (SchedulerCompat.isFolia()) {
             // Touching inventories is only legal on the owning region, so
-            // enqueue one entity-scheduler run per player.
+            // enqueue one entity-scheduler run per player. Ground items are
+            // handled by FoliaGroundExpiry (per-entity tracking) instead.
             for (Player player : Bukkit.getOnlinePlayers()) {
                 SchedulerCompat.runAtPlayer(plugin, player, () -> {
                     if (player.isOnline()
@@ -46,7 +47,6 @@ public final class ExpiryCheckTask implements Runnable {
                     }
                 });
             }
-            // Ground expiry needs per-region entity access - not supported.
             return;
         }
         for (Player player : Bukkit.getOnlinePlayers()) {

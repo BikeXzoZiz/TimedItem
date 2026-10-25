@@ -2,6 +2,14 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [2.4.1] - 2026-10-26
+
+### Added
+- **Ground expiry บน Folia สมบูรณ์แล้ว** — `scan_world_items` บน Folia ใช้ per-entity tracking แทนการเดินสแกนทุก world: ไอเทมที่หล่น (ItemSpawnEvent + ChunkLoadEvent ตอน chunk โหลด) และของใน item frame / บน armor stand (ตรวจตอน chunk โหลด + ตอนผู้เล่นคลิก) ที่มี timer จะถูกตั้ง repeating check บน **entity scheduler ของมันเอง** — รันบน region thread ของเจ้าของถูกต้อง และ task ยกเลิกตัวเองเมื่อ entity หายไปหรือไม่มี timed item แล้ว
+
+### Changed
+- บน Folia การหมดอายุบนพื้น/เฟรม/stand จะไม่มีเสียง/particle ให้ผู้เล่นใกล้เคียง (อ่านตำแหน่งผู้เล่นข้าม region ไม่ปลอดภัย) — recovery log, event และ `expiry_commands` ทำงานปกติ
+
 ## [2.4.0] - 2026-10-26
 
 ### Added

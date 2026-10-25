@@ -40,6 +40,7 @@ public final class SchedulerCompat {
     private static Method asyncRunNow;
     private static Method entityScheduler;
     private static Method entityExecute;
+    private static Method entityRunAtFixedRate;
     private static Method taskCancel;
 
     private SchedulerCompat() {
@@ -88,16 +89,46 @@ public final class SchedulerCompat {
 
     /** Runs on the player's region at once (next tick on Bukkit). */
     public static void runAtPlayer(Plugin plugin, Player player, Runnable body) {
+        runAtEntity(plugin, player, body);
+    }
+
+    /** Runs on the entity's region at once (next tick on Bukkit). */
+    public static void runAtEntity(Plugin plugin, org.bukkit.entity.Entity entity, Runnable body) {
         resolve();
         if (folia) {
             try {
-                entityExecute.invoke(entityScheduler.invoke(player), plugin, body, null, 0L);
+                entityExecute.invoke(entityScheduler.invoke(entity), plugin, body, null, 0L);
             } catch (Throwable t) {
-                warnOnce(t); // retired player (quit) also lands here - ignore
+                warnOnce(t); // retired entity also lands here - ignore
             }
         } else {
             Bukkit.getScheduler().runTask(plugin, body);
         }
+    }
+
+    /**
+     * Repeating check on the entity's own scheduler (Folia): the body runs
+     * on the region owning the entity and the task retires itself when the
+     * entity is removed (the retired callback then runs).
+     */
+    public static Handle runEntityTimer(Plugin plugin, org.bukkit.entity.Entity entity,
+                                        long initialDelayTicks, long periodTicks,
+                                        Runnable body, Runnable retired) {
+        resolve();
+        if (folia) {
+            try {
+                Object task = entityRunAtFixedRate.invoke(entityScheduler.invoke(entity), plugin,
+                        consumer(body), retired, initialDelayTicks, periodTicks);
+                return () -> cancelTask(task);
+            } catch (Throwable t) {
+                warnOnce(t);
+                retired.run();
+                return () -> {
+                };
+            }
+        }
+        final BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, body, initialDelayTicks, periodTicks);
+        return task::cancel;
     }
 
     /** Runs on the player's region after the delay (Bukkit: main thread later). */
@@ -152,6 +183,8 @@ public final class SchedulerCompat {
                     "io.papermc.paper.threadedregions.scheduler.EntityScheduler");
             entityExecute = entitySchedulerClass.getMethod("execute", Plugin.class,
                     Runnable.class, Runnable.class, long.class);
+            entityRunAtFixedRate = entitySchedulerClass.getMethod("runAtFixedRate", Plugin.class,
+                    Consumer.class, Runnable.class, long.class, long.class);
             Class<?> taskClass = Class.forName(
                     "io.papermc.paper.threadedregions.scheduler.ScheduledTask");
             taskCancel = taskClass.getMethod("cancel");
