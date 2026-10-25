@@ -17,7 +17,7 @@ public final class TimedItemTabCompleter implements TabCompleter {
     private static final List<String> SUBS = Arrays.asList(
             "set", "add", "give", "pause", "resume", "remove", "info", "menu", "restore", "reload");
     private static final List<String> TIME_HINTS =
-            Arrays.asList("60s", "5m", "30m", "1h", "6h", "1d", "7d");
+            Arrays.asList("60s", "5m", "30m", "1h", "6h", "1d", "1d12h", "7d", "30d");
     private static final List<String> AMOUNT_HINTS = Arrays.asList("1", "16", "32", "64");
 
     @Override

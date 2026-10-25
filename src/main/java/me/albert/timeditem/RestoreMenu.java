@@ -52,14 +52,16 @@ public final class RestoreMenu implements Listener {
         Holder holder = new Holder();
         holder.page = Math.max(0, Math.min(page, store.pageCount(PAGE_SIZE) - 1));
         Inventory inventory = Bukkit.createInventory(holder, 54,
-                ChatColorWrap.color("&8TimedItem Restore &7(" + (holder.page + 1)
-                        + "/" + store.pageCount(PAGE_SIZE) + ")"));
+                plugin.pluginConfig().getGuiRestoreTitle()
+                        .replace("{page}", String.valueOf(holder.page + 1))
+                        .replace("{pages}", String.valueOf(store.pageCount(PAGE_SIZE))));
         holder.inventory = inventory;
         render(inventory, holder.page);
         player.openInventory(inventory);
     }
 
     private void render(Inventory inventory, int page) {
+        PluginConfig config = plugin.pluginConfig();
         ItemStack filler = item(Material.GRAY_STAINED_GLASS_PANE, "&7", null);
         for (int slot = 0; slot < 54; slot++) {
             inventory.setItem(slot, filler);
@@ -78,22 +80,24 @@ public final class RestoreMenu implements Listener {
                 if (meta.hasLore() && meta.getLore() != null) {
                     lore.addAll(meta.getLore());
                 }
-                lore.add(color("&8" + format.format(new Date(entry.getTimeMillis()))));
-                lore.add(color("&7Player: &e" + (entry.getPlayer() == null ? "-" : entry.getPlayer())));
-                lore.add(color("&7World: &e" + entry.getWorld()));
-                lore.add(color("&aClick to recover"));
+                lore.add(config.getGuiRestoreDate()
+                        .replace("{date}", format.format(new Date(entry.getTimeMillis()))));
+                lore.add(config.getGuiRestorePlayer()
+                        .replace("{player}", entry.getPlayer() == null ? "-" : entry.getPlayer()));
+                lore.add(config.getGuiRestoreWorld().replace("{world}", entry.getWorld()));
+                lore.add(config.getGuiRestoreClick());
                 meta.setLore(lore);
                 display.setItemMeta(meta);
             }
             inventory.setItem(slot, display);
         }
         if (page > 0) {
-            inventory.setItem(PREV_SLOT, item(Material.ARROW, "&ePrevious page", null));
+            inventory.setItem(PREV_SLOT, item(Material.ARROW, config.getGuiRestorePrev(), null));
         }
         if (page < plugin.recoveryStore().pageCount(PAGE_SIZE) - 1) {
-            inventory.setItem(NEXT_SLOT, item(Material.ARROW, "&eNext page", null));
+            inventory.setItem(NEXT_SLOT, item(Material.ARROW, config.getGuiRestoreNext(), null));
         }
-        inventory.setItem(CLOSE_SLOT, item(Material.BARRIER, "&cClose", null));
+        inventory.setItem(CLOSE_SLOT, item(Material.BARRIER, config.getGuiCloseName(), null));
     }
 
     @EventHandler
@@ -169,12 +173,5 @@ public final class RestoreMenu implements Listener {
             item.setItemMeta(meta);
         }
         return item;
-    }
-
-    /** ChatColor is referenced through a wrapper to keep imports tidy. */
-    private static final class ChatColorWrap {
-        static String color(String text) {
-            return PluginConfig.color(text);
-        }
     }
 }

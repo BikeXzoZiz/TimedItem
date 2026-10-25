@@ -13,7 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -50,7 +50,8 @@ public final class TimedItemMenu implements Listener {
 
     public void open(Player player) {
         Holder holder = new Holder();
-        Inventory inventory = Bukkit.createInventory(holder, 27, ChatColorWrap.color("&6TimedItem Menu"));
+        Inventory inventory = Bukkit.createInventory(holder, 27,
+                plugin.pluginConfig().getGuiMenuTitle());
         holder.inventory = inventory;
         render(inventory, player);
         player.openInventory(inventory);
@@ -67,13 +68,13 @@ public final class TimedItemMenu implements Listener {
             String label = TimeLore.formatDuration(PRESETS[i], config);
             inventory.setItem(PRESET_SLOTS[i], item(Material.PAPER,
                     "&e" + label,
-                    Arrays.asList("&7Set this lifetime on", "&7the item in your hand")));
+                    Collections.singletonList(config.getGuiPresetLore())));
         }
-        inventory.setItem(TOGGLE_SLOT, item(Material.BLAZE_POWDER, "&6Pause / Resume",
-                Arrays.asList("&7Freeze the countdown,", "&7or resume a paused item")));
-        inventory.setItem(REMOVE_SLOT, item(Material.TNT, "&cRemove timer",
-                Arrays.asList("&7Strip the timer from", "&7the item in your hand")));
-        inventory.setItem(CLOSE_SLOT, item(Material.BARRIER, "&cClose", null));
+        inventory.setItem(TOGGLE_SLOT, item(Material.BLAZE_POWDER, config.getGuiToggleName(),
+                Collections.singletonList(config.getGuiToggleLore())));
+        inventory.setItem(REMOVE_SLOT, item(Material.TNT, config.getGuiRemoveName(),
+                Collections.singletonList(config.getGuiRemoveLore())));
+        inventory.setItem(CLOSE_SLOT, item(Material.BARRIER, config.getGuiCloseName(), null));
     }
 
     private ItemStack statusItem(Player player) {
@@ -81,21 +82,24 @@ public final class TimedItemMenu implements Listener {
         TimeLore.TimerInfo info = TimeLore.analyze(player.getInventory().getItemInMainHand(), config);
         List<String> lore = new ArrayList<String>();
         if (info == null) {
-            lore.add("&7Held item: &cno timer");
+            lore.add(config.getGuiStatusNoTimer());
         } else if (info.getType() == TimeLore.Type.EXPIRE && info.getExpiry() != null) {
             long remaining = java.time.Duration.between(java.time.LocalDateTime.now(), info.getExpiry()).getSeconds();
             String pretty = remaining > 0 ? TimeLore.formatDuration(Math.max(0L, remaining), config) : "0" + config.getUnitS();
-            lore.add("&7Type: &eexpire");
-            lore.add("&7Remaining: &e" + pretty);
-            lore.add("&7Expires at: &e" + TimeLore.LORE_FORMAT.format(info.getExpiry()));
+            lore.add(config.getGuiStatusTypeExpire());
+            lore.add(config.getGuiStatusRemaining().replace("{time}", pretty));
+            lore.add(config.getGuiStatusExpiresAt()
+                    .replace("{date}", TimeLore.LORE_FORMAT.format(info.getExpiry())));
         } else if (info.getType() == TimeLore.Type.PAUSED) {
-            lore.add("&7Type: &epaused");
-            lore.add("&7Remaining: &e" + TimeLore.formatDuration(Math.max(0L, info.getSeconds()), config));
+            lore.add(config.getGuiStatusTypePaused());
+            lore.add(config.getGuiStatusRemaining()
+                    .replace("{time}", TimeLore.formatDuration(Math.max(0L, info.getSeconds()), config)));
         } else {
-            lore.add("&7Type: &elifetime (not started)");
-            lore.add("&7Duration: &e" + TimeLore.formatDuration(Math.max(0L, info.getSeconds()), config));
+            lore.add(config.getGuiStatusTypeLifetime());
+            lore.add(config.getGuiStatusDuration()
+                    .replace("{time}", TimeLore.formatDuration(Math.max(0L, info.getSeconds()), config)));
         }
-        return item(Material.ENCHANTED_BOOK, "&6Held item status", lore);
+        return item(Material.ENCHANTED_BOOK, config.getGuiStatusName(), lore);
     }
 
     @EventHandler

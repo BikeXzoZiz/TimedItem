@@ -1,0 +1,73 @@
+# TimedItem language file: English
+# Loaded according to Settings.language in config.yml. Missing keys are
+# self-healed from the built-in defaults and written back.
+# Color codes use & (e.g. &6 gold). {placeholders} are replaced at runtime.
+
+Messages:
+  prefix: "&6[TimedItem] &r"
+  expire: "&cYour item has expired and was removed!"
+  expire_soon: "&eYour item will expire in &c{time}&e!"
+  no_item: "&cHold the item you want to manage first."
+  player_only: "&cOnly players can use this command."
+  no_timer: "&7The item in your hand has no timer."
+  item_cleared: "&aTimer removed from the item in your hand."
+  time_added: "&aTime added. Remaining: &e{time}"
+  timer_paused: "&aTimer paused with &e{time}&a remaining."
+  timer_resumed: "&aTimer resumed. Expires in &e{time}&a."
+  timer_not_started: "&7The timer on this item has not started yet."
+  already_paused: "&7The timer on this item is already paused."
+  already_running: "&7The timer on this item is already running."
+  invalid_usage: "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload"
+  config_reload: "&aTimedItem config reloaded."
+  time_set: "&aTimer set: &e{time}"
+  info_remaining: "&7Time remaining: &e{time}"
+  info_lifetime: "&7Lifetime: &e{time} &7(starts on first use)"
+  give_sent: "&aGave a timed item (&e{time}&a) to &e{player}&a."
+  give_received: "&aYou received a timed item expiring in &e{time}&a."
+  target_not_found: "&cPlayer &e{player} &cis not online."
+  material_blacklisted: "&cThis item's material cannot carry a TimedItem timer."
+  restore_given: "&aRecovered the item from the expiry log."
+  restore_empty: "&7The expiry recovery log is empty."
+  update_available: "&eTimedItem &6{version} &eis available: &7{url}"
+
+DateFormat:
+  # Lore prefixes shown on timed items. Changing these after items with
+  # timers already exist will make those items unrecognizable (they are
+  # also how lore-only items on 1.13 store their timer).
+  # Avoid a trailing "&s" (it would collide with the internal separator).
+  expires_at: "&cExpires: "
+  useful_life: "&7Lifetime: "
+  # Shown on items whose timer was frozen with /ti pause
+  paused: "&7Paused: "
+  # Unit labels used by /ti set and shown in the lore, e.g. 1d12h30m.
+  # Keep these identical across language files and do not change them
+  # once items exist - the label is part of the stored lore format.
+  s: "s"
+  m: "m"
+  h: "h"
+  d: "d"
+
+Gui:
+  # Labels of the /ti menu and /ti restore GUIs.
+  menu_title: "&6TimedItem Menu"
+  preset_lore: "&7Set this lifetime on the item in your hand"
+  toggle_name: "&6Pause / Resume"
+  toggle_lore: "&7Freeze the countdown, or resume a paused item"
+  remove_name: "&cRemove timer"
+  remove_lore: "&7Strip the timer from the item in your hand"
+  close_name: "&cClose"
+  status_name: "&6Held item status"
+  status_no_timer: "&7Held item: &cno timer"
+  status_type_expire: "&7Type: &eexpire"
+  status_type_paused: "&7Type: &epaused"
+  status_type_lifetime: "&7Type: &elifetime (not started)"
+  status_remaining: "&7Remaining: &e{time}"
+  status_expires_at: "&7Expires at: &e{date}"
+  status_duration: "&7Duration: &e{time}"
+  restore_title: "&8TimedItem Restore &7({page}/{pages})"
+  restore_date: "&8{date}"
+  restore_player: "&7Player: &e{player}"
+  restore_world: "&7World: &e{world}"
+  restore_click: "&aClick to recover"
+  restore_prev: "&ePrevious page"
+  restore_next: "&eNext page"

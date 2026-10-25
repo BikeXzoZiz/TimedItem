@@ -13,18 +13,22 @@ import java.lang.reflect.Method;
  * 1.13 every method silently no-ops and TimeLore falls back to lore.
  *
  * Stores two keys on the item: "type" (expire|lifetime|paused) and
- * "value" (epoch millis for expire, seconds otherwise).
+ * "value" (epoch millis for expire, seconds otherwise). All Methods are
+ * resolved once in init - this is the hottest path in the plugin (every
+ * click, scan and actionbar tick), so per-call lookups are out.
  */
 public final class PdcCompat {
 
-    private static boolean attempted;
-    private static boolean available;
+    private static volatile boolean attempted;
+    private static volatile boolean available;
     private static NamespacedKey typeKey;
     private static NamespacedKey valueKey;
     private static Object stringType;
     private static Object longType;
-    private static Method getPdcMethod;
-    private static Class<?> dataTypeClass;
+    private static volatile Method getPdcMethod;
+    private static volatile Method setMethod;
+    private static volatile Method getMethod;
+    private static volatile Method removeMethod;
 
     private PdcCompat() {
     }
@@ -35,12 +39,16 @@ public final class PdcCompat {
         }
         attempted = true;
         try {
-            dataTypeClass = Class.forName("org.bukkit.persistence.PersistentDataType");
+            Class<?> dataTypeClass = Class.forName("org.bukkit.persistence.PersistentDataType");
             stringType = dataTypeClass.getField("STRING").get(null);
             longType = dataTypeClass.getField("LONG").get(null);
             typeKey = new NamespacedKey(plugin, "type");
             valueKey = new NamespacedKey(plugin, "value");
             getPdcMethod = ItemMeta.class.getMethod("getPersistentDataContainer");
+            Class<?> containerClass = Class.forName("org.bukkit.persistence.PersistentDataContainer");
+            setMethod = containerClass.getMethod("set", NamespacedKey.class, dataTypeClass, Object.class);
+            getMethod = containerClass.getMethod("get", NamespacedKey.class, dataTypeClass);
+            removeMethod = containerClass.getMethod("remove", NamespacedKey.class);
             available = true;
         } catch (Throwable t) {
             available = false; // 1.13 server: lore stays the only storage
@@ -61,9 +69,8 @@ public final class PdcCompat {
                 return;
             }
             Object container = getPdcMethod.invoke(meta);
-            Method set = container.getClass().getMethod("set", NamespacedKey.class, dataTypeClass, Object.class);
-            set.invoke(container, typeKey, stringType, type);
-            set.invoke(container, valueKey, longType, value);
+            setMethod.invoke(container, typeKey, stringType, type);
+            setMethod.invoke(container, valueKey, longType, value);
             item.setItemMeta(meta);
         } catch (Throwable ignored) {
             // keep lore as the storage of record
@@ -81,12 +88,11 @@ public final class PdcCompat {
                 return null;
             }
             Object container = getPdcMethod.invoke(meta);
-            Method get = container.getClass().getMethod("get", NamespacedKey.class, dataTypeClass);
-            String type = (String) get.invoke(container, typeKey, stringType);
+            String type = (String) getMethod.invoke(container, typeKey, stringType);
             if (type == null) {
                 return null;
             }
-            Long value = (Long) get.invoke(container, valueKey, longType);
+            Long value = (Long) getMethod.invoke(container, valueKey, longType);
             if (value == null) {
                 return null;
             }
@@ -106,9 +112,8 @@ public final class PdcCompat {
                 return;
             }
             Object container = getPdcMethod.invoke(meta);
-            Method remove = container.getClass().getMethod("remove", NamespacedKey.class);
-            remove.invoke(container, typeKey);
-            remove.invoke(container, valueKey);
+            removeMethod.invoke(container, typeKey);
+            removeMethod.invoke(container, valueKey);
             item.setItemMeta(meta);
         } catch (Throwable ignored) {
             // nothing stored, nothing to do

@@ -1,51 +1,14 @@
-# TimedItem 2.3.0
+# TimedItem 2.4.0
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
+# Messages live in lang/messages_<language>.yml (see Settings.language).
 
-config-version: 5
-
-Messages:
-  prefix: "&6[TimedItem] &r"
-  expire: "&cYour item has expired and was removed!"
-  expire_soon: "&eYour item will expire in &c{time}&e!"
-  no_item: "&cHold the item you want to manage first."
-  player_only: "&cOnly players can use this command."
-  no_timer: "&7The item in your hand has no timer."
-  item_cleared: "&aTimer removed from the item in your hand."
-  time_added: "&aTime added. Remaining: &e{time}"
-  timer_paused: "&aTimer paused with &e{time}&a remaining."
-  timer_resumed: "&aTimer resumed. Expires in &e{time}&a."
-  timer_not_started: "&7The timer on this item has not started yet."
-  already_paused: "&7The timer on this item is already paused."
-  already_running: "&7The timer on this item is already running."
-  invalid_usage: "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload"
-  config_reload: "&aTimedItem config reloaded."
-  time_set: "&aTimer set: &e{time}"
-  info_remaining: "&7Time remaining: &e{time}"
-  info_lifetime: "&7Lifetime: &e{time} &7(starts on first use)"
-  give_sent: "&aGave a timed item (&e{time}&a) to &e{player}&a."
-  give_received: "&aYou received a timed item expiring in &e{time}&a."
-  target_not_found: "&cPlayer &e{player} &cis not online."
-  material_blacklisted: "&cThis item's material cannot carry a TimedItem timer."
-  restore_given: "&aRecovered the item from the expiry log."
-  restore_empty: "&7The expiry recovery log is empty."
-  update_available: "&eTimedItem &6{version} &eis available: &7{url}"
-
-DateFormat:
-  # Lore prefixes shown on timed items. Changing these after items with
-  # timers already exist will make those items unrecognizable.
-  # Avoid a trailing "&s" (it would collide with the internal separator).
-  expires_at: "&cExpires: "
-  useful_life: "&7Lifetime: "
-  # Shown on items whose timer was frozen with /ti pause
-  paused: "&7Paused: "
-  # Unit labels used by /ti set and shown in the lore, e.g. 1d12h30m
-  s: "s"
-  m: "m"
-  h: "h"
-  d: "d"
+config-version: 7
 
 Settings:
+  # Language file to load messages from: lang/messages_en.yml,
+  # lang/messages_th.yml, or drop in your own lang/messages_<x>.yml.
+  language: "en"
   # true  = the timer starts counting on the item's first click/use
   # false = the timer starts immediately when /ti set is used
   start_date_calculate_on_click: true
@@ -61,7 +24,12 @@ Settings:
     interval_seconds: 10
     # Also scan ground items, item frames and armor stands for expired
     # items every interval. Off by default - it walks every loaded world.
+    # (Not available on Folia.)
     scan_world_items: false
+    # true  = creative players are skipped entirely: their timed items
+    #         neither expire nor show a countdown/warnings.
+    # false = creative players are processed like any other gamemode.
+    ignore_creative: true
   warning:
     # Message + sound when an item enters its final seconds.
     # Requires expire_check to be enabled.
@@ -116,6 +84,17 @@ Settings:
     max_items: 500
     # Entries older than this many days are pruned on startup.
     keep_days: 7
+  discord_webhook:
+    # Post a message to a Discord channel whenever an item expires
+    # (players and ground items). Create the webhook in Discord:
+    # channel settings -> Integrations -> Webhooks -> copy URL.
+    enabled: false
+    url: ""
+    # Name shown as the message author on Discord.
+    username: "TimedItem"
+    # Message template. Placeholders: {player} (- for ground expiry),
+    # {item} (material name), {world}.
+    message: "{player}'s timed item expired: {item} ({world})"
   blacklist:
     # Materials that may never receive a timer via /ti set, /ti add,
     # /ti give or the menu. Items already carrying a timer are unaffected.

@@ -34,37 +34,48 @@ public final class ActionbarTask implements Runnable {
             return;
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.getGameMode() == GameMode.CREATIVE) {
+            if (SchedulerCompat.isFolia()) {
+                // Sending the actionbar must happen on the owning region.
+                SchedulerCompat.runAtPlayer(plugin, player, () -> send(player, config));
+            } else if (config.isIgnoreCreative() && player.getGameMode() == GameMode.CREATIVE) {
                 continue;
-            }
-            ItemStack item = player.getInventory().getItemInMainHand();
-            if (item == null || item.getType() == Material.AIR) {
-                continue;
-            }
-            TimeLore.TimerInfo info = TimeLore.analyze(item, config);
-            if (info == null) {
-                continue;
-            }
-            long remaining;
-            if (info.getType() == TimeLore.Type.EXPIRE && info.getExpiry() != null) {
-                remaining = Duration.between(LocalDateTime.now(), info.getExpiry()).getSeconds();
-            } else if (info.getType() == TimeLore.Type.PAUSED
-                    || info.getType() == TimeLore.Type.LIFETIME) {
-                remaining = info.getSeconds();
             } else {
-                continue;
+                send(player, config);
             }
-            if (remaining < 0) {
-                remaining = 0;
-            }
-            String text = PluginConfig.color(config.getActionbarFormat()
-                    .replace("{time}", TimeLore.formatDuration(remaining, config)));
-            try {
-                ActionbarCompat.send(player, text);
-            } catch (Throwable t) {
-                broken = true;
-                return;
-            }
+        }
+    }
+
+    private void send(Player player, PluginConfig config) {
+        if (!player.isOnline()
+                || (config.isIgnoreCreative() && player.getGameMode() == GameMode.CREATIVE)) {
+            return;
+        }
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item == null || item.getType() == Material.AIR) {
+            return;
+        }
+        TimeLore.TimerInfo info = TimeLore.analyze(item, config);
+        if (info == null) {
+            return;
+        }
+        long remaining;
+        if (info.getType() == TimeLore.Type.EXPIRE && info.getExpiry() != null) {
+            remaining = Duration.between(LocalDateTime.now(), info.getExpiry()).getSeconds();
+        } else if (info.getType() == TimeLore.Type.PAUSED
+                || info.getType() == TimeLore.Type.LIFETIME) {
+            remaining = info.getSeconds();
+        } else {
+            return;
+        }
+        if (remaining < 0) {
+            remaining = 0;
+        }
+        String text = PluginConfig.color(config.getActionbarFormat()
+                .replace("{time}", TimeLore.formatDuration(remaining, config)));
+        try {
+            ActionbarCompat.send(player, text);
+        } catch (Throwable t) {
+            broken = true;
         }
     }
 }

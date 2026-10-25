@@ -1,6 +1,5 @@
 package me.albert.timeditem;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -38,7 +37,7 @@ public final class UpdateChecker implements Listener {
             return;
         }
         String repository = plugin.pluginConfig().getUpdateCheckRepository();
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        SchedulerCompat.runAsync(plugin, () -> {
             String latest = fetchLatestTag(repository);
             if (latest == null) {
                 return;
@@ -62,7 +61,7 @@ public final class UpdateChecker implements Listener {
         if (!player.hasPermission("timeditem.admin")) {
             return;
         }
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        SchedulerCompat.runAtPlayerLater(plugin, player, () -> {
             if (player.isOnline()) {
                 player.sendMessage(plugin.pluginConfig().getPrefix()
                         + plugin.pluginConfig().getUpdateAvailable()

@@ -1,9 +1,6 @@
 package me.albert.timeditem;
 
-import me.albert.timeditem.api.ItemExpireEvent;
-import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -22,11 +19,11 @@ import org.bukkit.inventory.PlayerInventory;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Deletes expired items and starts not-yet-started lifetimes.
@@ -44,7 +41,7 @@ public final class ExpiryListener implements Listener {
 
     private final TimedItemPlugin plugin;
     /** Player UUID -> timer lines already warned about (one warning per item). */
-    private final Map<UUID, Set<String>> warned = new HashMap<UUID, Set<String>>();
+    private final Map<UUID, Set<String>> warned = new ConcurrentHashMap<UUID, Set<String>>();
 
     public ExpiryListener(TimedItemPlugin plugin) {
         this.plugin = plugin;
@@ -56,7 +53,7 @@ public final class ExpiryListener implements Listener {
             return;
         }
         Player player = (Player) event.getWhoClicked();
-        if (player.getGameMode() == GameMode.CREATIVE) {
+        if (isIgnored(player)) {
             return;
         }
         boolean allowStart = plugin.pluginConfig().isStartDateCalculateOnClick();
@@ -67,7 +64,7 @@ public final class ExpiryListener implements Listener {
         if (event.getAction() == InventoryAction.HOTBAR_SWAP) {
             // The item leaving the hotbar lands in the clicked slot only
             // after the event applies, so re-check the inventory next tick.
-            Bukkit.getScheduler().runTask(plugin, () -> {
+            SchedulerCompat.runAtPlayer(plugin, player, () -> {
                 if (player.isOnline()) {
                     scanInventory(player, allowStart);
                 }
@@ -78,7 +75,7 @@ public final class ExpiryListener implements Listener {
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
-        if (player.getGameMode() == GameMode.CREATIVE) {
+        if (isIgnored(player)) {
             return;
         }
         ItemStack item = event.getItem();
@@ -91,7 +88,7 @@ public final class ExpiryListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        SchedulerCompat.runAtPlayerLater(plugin, player, () -> {
             if (player.isOnline()) {
                 scanInventory(player, true);
             }
@@ -109,7 +106,7 @@ public final class ExpiryListener implements Listener {
             return;
         }
         Player player = (Player) event.getEntity();
-        if (player.getGameMode() == GameMode.CREATIVE) {
+        if (isIgnored(player)) {
             return;
         }
         PlayerInventory inv = player.getInventory();
@@ -136,7 +133,7 @@ public final class ExpiryListener implements Listener {
             return;
         }
         Player player = (Player) event.getEntity();
-        if (player.getGameMode() == GameMode.CREATIVE) {
+        if (isIgnored(player)) {
             return;
         }
         ItemStack stack = event.getItem().getItemStack();
@@ -231,61 +228,21 @@ public final class ExpiryListener implements Listener {
     }
 
     /**
-     * Shared expiry routine for every player-bound context. Fires the
-     * cancellable {@link ItemExpireEvent} first; when cancelled nothing
-     * happens and false is returned. Records the item in the recovery
-     * log before removal.
+     * Expiry entry point for every player-bound context, delegating to
+     * the shared {@link ExpiryService} pipeline (also used for ground
+     * expiry, so both behave identically).
      */
     public boolean expireNow(ItemStack item, Player player, Runnable removal, boolean armor,
                              PluginConfig config) {
-        ItemExpireEvent event = new ItemExpireEvent(item, player);
-        Bukkit.getPluginManager().callEvent(event);
-        if (event.isCancelled()) {
-            return false;
-        }
-        plugin.recoveryStore().record(item, player, player == null ? null : player.getWorld());
-        removal.run();
-        if (player == null) {
-            return true;
-        }
-        if (config.isSoundEnabled()) {
-            player.playSound(player.getLocation(), config.getSoundName(),
-                    config.getSoundVolume(), config.getSoundPitch());
-        }
-        if (config.isParticleEnabled()) {
-            ParticleCompat.spawn(player, config.getParticleName(), config.getParticleCount());
-        }
-        if (armor && config.isResetPlayerHealthIfArmor()) {
-            HealthCompat.resetMaxHealth(player);
-        }
-        player.sendMessage(config.getPrefix() + config.getExpire());
-        for (String command : config.getExpiryCommands()) {
-            String cmd = command.replace("{player}", player.getName());
-            if (cmd.startsWith("/")) {
-                cmd = cmd.substring(1);
-            }
-            if (!cmd.isEmpty()) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-            }
-        }
-        return true;
+        return plugin.expiryService().expire(item, player,
+                player == null ? null : player.getLocation(),
+                player == null ? null : player.getWorld(), removal, armor, config);
     }
 
-    /** Nearest player within the radius of the location, or null. */
-    public static Player nearestPlayer(Location center, double radius) {
-        Player nearest = null;
-        double nearestDistance = Double.MAX_VALUE;
-        for (Player player : center.getWorld().getPlayers()) {
-            if (!player.getWorld().equals(center.getWorld())) {
-                continue;
-            }
-            double distance = player.getLocation().distanceSquared(center);
-            if (distance <= radius * radius && distance < nearestDistance) {
-                nearest = player;
-                nearestDistance = distance;
-            }
-        }
-        return nearest;
+    /** True when this player is skipped entirely (creative exemption). */
+    private boolean isIgnored(Player player) {
+        return plugin.pluginConfig().isIgnoreCreative()
+                && player.getGameMode() == GameMode.CREATIVE;
     }
 
     private void clearHeldSlot(PlayerInteractEvent event) {

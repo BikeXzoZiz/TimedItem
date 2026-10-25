@@ -1,0 +1,72 @@
+# TimedItem ไฟล์ภาษา: ไทย
+# โหลดตามค่า Settings.language ใน config.yml กุญแจที่หายจะถูกเติมจาก
+# default ในตัวและบันทึกกลับลงไฟล์เอง
+# ใช้รหัสสีแบบ & (เช่น &6 ทอง) {placeholder} จะถูกแทนค่าตอนรัน
+
+Messages:
+  prefix: "&6[TimedItem] &r"
+  expire: "&cไอเทมของคุณหมดอายุและถูกลบไปแล้ว!"
+  expire_soon: "&eไอเทมของคุณจะหมดอายุในอีก &c{time}&e!"
+  no_item: "&cต้องถือไอเทมที่ต้องการจัดการก่อน"
+  player_only: "&cคำสั่งนี้ใช้ได้เฉพาะผู้เล่นเท่านั้น"
+  no_timer: "&7ไอเทมในมือคุณไม่มีตัวจับเวลา"
+  item_cleared: "&aลบตัวจับเวลาออกจากไอเทมในมือแล้ว"
+  time_added: "&aเพิ่มเวลาแล้ว เหลือ: &e{time}"
+  timer_paused: "&aหยุดเวลาไว้ชั่วคราว เหลือ &e{time}"
+  timer_resumed: "&aเดินเวลาต่อแล้ว จะหมดอายุในอีก &e{time}"
+  timer_not_started: "&7ตัวจับเวลาบนไอเทมนี้ยังไม่เริ่มนับ"
+  already_paused: "&7ตัวจับเวลาบนไอเทมนี้หยุดอยู่แล้ว"
+  already_running: "&7ตัวจับเวลาบนไอเทมนี้นับอยู่แล้ว"
+  invalid_usage: "&cวิธีใช้: /ti set <เวลา>, /ti add <เวลา>, /ti give <ผู้เล่น> <เวลา> [จำนวน], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload"
+  config_reload: "&aโหลด config ของ TimedItem ใหม่แล้ว"
+  time_set: "&aตั้งตัวจับเวลา: &e{time}"
+  info_remaining: "&7เวลาที่เหลือ: &e{time}"
+  info_lifetime: "&7อายุการใช้งาน: &e{time} &7(เริ่มนับเมื่อใช้ครั้งแรก)"
+  give_sent: "&aส่งไอเทมตัวจับเวลา (&e{time}&a) ให้ &e{player}&a แล้ว"
+  give_received: "&aคุณได้รับไอเทมที่จะหมดอายุในอีก &e{time}&a"
+  target_not_found: "&cไม่พบผู้เล่น &e{player} &c(ไม่ได้ออนไลน์)"
+  material_blacklisted: "&cmaterial นี้ใส่ตัวจับเวลาของ TimedItem ไม่ได้"
+  restore_given: "&aคืนไอเทมจากบันทึกการหมดอายุแล้ว"
+  restore_empty: "&7บันทึกการกู้คืนยังว่างอยู่"
+  update_available: "&eTimedItem &6{version} &eมีเวอร์ชันใหม่แล้ว: &7{url}"
+
+DateFormat:
+  # Prefix ที่เขียนลง lore ของไอเทม — ห้ามแก้หลังมีไอเทมที่มี timer อยู่แล้ว
+  # (เป็นตัวระบุบรรทัด lore ตอนอ่านค่า โดยเฉพาะบนเซิร์ฟ 1.13 ที่เก็บใน lore)
+  # หลีกเลี่ยง "&s" ท้ายค่า (จะชนกับตัวคั่นภายใน)
+  expires_at: "&cหมดอายุ: "
+  useful_life: "&7อายุการใช้งาน: "
+  # แสดงบนไอเทมที่หยุดเวลาไว้ด้วย /ti pause
+  paused: "&7หยุดไว้: "
+  # หน่วยเวลาที่ใช้กับ /ti set และแสดงใน lore เช่น 1d12h30m
+  # ให้เหมือนกันทุกไฟล์ภาษา และห้ามแก้หลังมีไอเทมอยู่แล้ว
+  # เพราะหน่วยเป็นส่วนหนึ่งของฟอร์แมต lore ที่เก็บไว้
+  s: "s"
+  m: "m"
+  h: "h"
+  d: "d"
+
+Gui:
+  # ป้ายชื่อใน GUI ของ /ti menu และ /ti restore
+  menu_title: "&6เมนู TimedItem"
+  preset_lore: "&7ตั้งอายุการใช้งานนี้ให้ไอเทมในมือ"
+  toggle_name: "&6หยุด / เดินเวลา"
+  toggle_lore: "&7หยุดเวลาชั่วคราว หรือเดินเวลาต่อจากเดิม"
+  remove_name: "&cลบตัวจับเวลา"
+  remove_lore: "&7ถอดตัวจับเวลาออกจากไอเทมในมือ"
+  close_name: "&cปิด"
+  status_name: "&6สถานะไอเทมที่ถือ"
+  status_no_timer: "&7ไอเทมที่ถือ: &cไม่มีตัวจับเวลา"
+  status_type_expire: "&7ประเภท: &eนับถอยหลัง"
+  status_type_paused: "&7ประเภท: &eหยุดไว้"
+  status_type_lifetime: "&7ประเภท: &eอายุการใช้งาน (ยังไม่เริ่ม)"
+  status_remaining: "&7เวลาที่เหลือ: &e{time}"
+  status_expires_at: "&7หมดอายุเมื่อ: &e{date}"
+  status_duration: "&7ระยะเวลา: &e{time}"
+  restore_title: "&8กู้คืนไอเทม TimedItem &7({page}/{pages})"
+  restore_date: "&8{date}"
+  restore_player: "&7ผู้เล่น: &e{player}"
+  restore_world: "&7โลก: &e{world}"
+  restore_click: "&aคลิกเพื่อรับคืน"
+  restore_prev: "&eหน้าก่อนหน้า"
+  restore_next: "&eหน้าถัดไป"

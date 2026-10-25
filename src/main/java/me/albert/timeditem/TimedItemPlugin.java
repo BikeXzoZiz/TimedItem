@@ -6,21 +6,22 @@ import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 
 public final class TimedItemPlugin extends JavaPlugin {
 
-    /** bStats plugin id - replace with the real id after registering the plugin on bStats.org. */
-    private static final int BSTATS_PLUGIN_ID = 17777;
+    /** bStats plugin id - TimedItemRewrite, https://bstats.org/plugin/bukkit/TimedItemRewrite/34946 */
+    private static final int BSTATS_PLUGIN_ID = 34946;
 
     private PluginConfig config;
+    private ExpiryService expiryService;
     private ExpiryListener listener;
     private TimedItemMenu menu;
     private UpdateChecker updateChecker;
     private RecoveryStore recoveryStore;
     private RestoreMenu restoreMenu;
-    private BukkitTask expiryTask;
-    private BukkitTask actionbarTask;
+    private DiscordWebhook discordWebhook;
+    private SchedulerCompat.Handle expiryTask;
+    private SchedulerCompat.Handle actionbarTask;
 
     @Override
     public void onEnable() {
@@ -33,6 +34,10 @@ public final class TimedItemPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(menu, this);
         recoveryStore = new RecoveryStore(this);
         recoveryStore.load();
+        expiryService = new ExpiryService(this);
+        // created before the tasks start: on Folia a region thread can
+        // expire an item while onEnable is still running
+        discordWebhook = new DiscordWebhook(this);
         restoreMenu = new RestoreMenu(this);
         Bukkit.getPluginManager().registerEvents(restoreMenu, this);
         PluginCommand command = getCommand("timeditem");
@@ -46,9 +51,17 @@ public final class TimedItemPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(updateChecker, this);
         updateChecker.check();
         if (config.isMetricsEnabled()) {
-            new Metrics(this, BSTATS_PLUGIN_ID);
+            try {
+                new Metrics(this, BSTATS_PLUGIN_ID);
+            } catch (Throwable t) {
+                getLogger().warning("Could not start bStats metrics: " + t);
+            }
         }
         hookPlaceholderApi();
+        if (SchedulerCompat.isFolia()) {
+            getLogger().info("Folia detected - player expiry runs on the owning region"
+                    + " thread; ground-item scan (scan_world_items) is not available.");
+        }
         getLogger().info("TimedItem enabled - timed items expire when their timer runs out.");
     }
 
@@ -72,38 +85,49 @@ public final class TimedItemPlugin extends JavaPlugin {
         return recoveryStore;
     }
 
+    public ExpiryService expiryService() {
+        return expiryService;
+    }
+
+    public DiscordWebhook discordWebhook() {
+        return discordWebhook;
+    }
+
     public RestoreMenu restoreMenu() {
         return restoreMenu;
     }
 
     @Override
     public void onDisable() {
-        if (expiryTask != null) {
-            expiryTask.cancel();
-            expiryTask = null;
+        cancelTask(expiryTask);
+        expiryTask = null;
+        cancelTask(actionbarTask);
+        actionbarTask = null;
+        recoveryStore.close();
+        if (discordWebhook != null) {
+            discordWebhook.close();
         }
-        if (actionbarTask != null) {
-            actionbarTask.cancel();
-            actionbarTask = null;
+    }
+
+    private void cancelTask(SchedulerCompat.Handle handle) {
+        if (handle != null) {
+            handle.cancel();
         }
     }
 
     /** (Re)starts the periodic expiry check and the actionbar task from the current config. */
     public void startTasks() {
-        if (expiryTask != null) {
-            expiryTask.cancel();
-            expiryTask = null;
-        }
-        if (actionbarTask != null) {
-            actionbarTask.cancel();
-            actionbarTask = null;
-        }
+        cancelTask(expiryTask);
+        expiryTask = null;
+        cancelTask(actionbarTask);
+        actionbarTask = null;
         if (config.isExpireCheckEnabled()) {
             long ticks = config.getExpireCheckSeconds() * 20L;
-            expiryTask = Bukkit.getScheduler().runTaskTimer(this, new ExpiryCheckTask(this, listener), ticks, ticks);
+            expiryTask = SchedulerCompat.runGlobalTimer(this, ticks, ticks,
+                    new ExpiryCheckTask(this, listener));
         }
         if (config.isActionbarEnabled()) {
-            actionbarTask = Bukkit.getScheduler().runTaskTimer(this, new ActionbarTask(this), 20L, 20L);
+            actionbarTask = SchedulerCompat.runGlobalTimer(this, 20L, 20L, new ActionbarTask(this));
         }
     }
 

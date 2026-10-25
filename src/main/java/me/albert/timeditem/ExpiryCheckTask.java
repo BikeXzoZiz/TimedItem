@@ -1,13 +1,10 @@
 package me.albert.timeditem;
 
-import me.albert.timeditem.api.ItemExpireEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
@@ -21,7 +18,8 @@ import java.time.LocalDateTime;
  * so items are removed even if the player never clicks, uses, or takes
  * damage while holding them. Optionally (Settings.expire_check.
  * scan_world_items) also scans ground items, item frames and armor
- * stands in every loaded world.
+ * stands in every loaded world. All expiry runs go through the shared
+ * {@link ExpiryService}.
  */
 public final class ExpiryCheckTask implements Runnable {
 
@@ -36,8 +34,23 @@ public final class ExpiryCheckTask implements Runnable {
     @Override
     public void run() {
         PluginConfig config = plugin.pluginConfig();
+        if (SchedulerCompat.isFolia()) {
+            // Touching inventories is only legal on the owning region, so
+            // enqueue one entity-scheduler run per player.
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                SchedulerCompat.runAtPlayer(plugin, player, () -> {
+                    if (player.isOnline()
+                            && !(config.isIgnoreCreative()
+                                    && player.getGameMode() == GameMode.CREATIVE)) {
+                        listener.scanInventory(player, false);
+                    }
+                });
+            }
+            // Ground expiry needs per-region entity access - not supported.
+            return;
+        }
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.getGameMode() == GameMode.CREATIVE) {
+            if (config.isIgnoreCreative() && player.getGameMode() == GameMode.CREATIVE) {
                 continue;
             }
             listener.scanInventory(player, false);
@@ -52,9 +65,9 @@ public final class ExpiryCheckTask implements Runnable {
         for (World world : Bukkit.getWorlds()) {
             for (Item entity : world.getEntitiesByClass(Item.class)) {
                 ItemStack stack = entity.getItemStack();
-                if (isExpiredGroundItem(stack, config, now)
-                        && expireGround(entity, stack, config)) {
-                    entity.remove();
+                if (isExpiredGroundItem(stack, config, now)) {
+                    plugin.expiryService().expire(stack, null, entity.getLocation(),
+                            entity.getWorld(), entity::remove, false, config);
                 }
             }
             for (ItemFrame frame : world.getEntitiesByClass(ItemFrame.class)) {
@@ -62,9 +75,10 @@ public final class ExpiryCheckTask implements Runnable {
                 if (stack.getType() == Material.AIR) {
                     continue;
                 }
-                if (isExpiredGroundItem(stack, config, now)
-                        && expireGround(frame, stack, config)) {
-                    frame.setItem(new ItemStack(Material.AIR));
+                if (isExpiredGroundItem(stack, config, now)) {
+                    plugin.expiryService().expire(stack, null, frame.getLocation(),
+                            frame.getWorld(),
+                            () -> frame.setItem(new ItemStack(Material.AIR)), false, config);
                 }
             }
             for (ArmorStand stand : world.getEntitiesByClass(ArmorStand.class)) {
@@ -77,12 +91,14 @@ public final class ExpiryCheckTask implements Runnable {
                 for (int i = 0; i < armor.length; i++) {
                     ItemStack piece = armor[i];
                     if (piece == null || piece.getType() == Material.AIR
-                            || !isExpiredGroundItem(piece, config, now)
-                            || !expireGround(stand, piece, config)) {
+                            || !isExpiredGroundItem(piece, config, now)) {
                         continue;
                     }
-                    armor[i] = null;
-                    changed = true;
+                    final int index = i;
+                    if (plugin.expiryService().expire(piece, null, stand.getLocation(),
+                            stand.getWorld(), () -> armor[index] = null, false, config)) {
+                        changed = true;
+                    }
                 }
                 if (changed) {
                     equipment.setArmorContents(armor);
@@ -95,35 +111,5 @@ public final class ExpiryCheckTask implements Runnable {
         TimeLore.TimerInfo info = TimeLore.analyze(stack, config);
         return info != null && info.getType() == TimeLore.Type.EXPIRE
                 && info.getExpiry() != null && info.getExpiry().isBefore(now);
-    }
-
-    /** Fires the cancellable event and removes the item, then plays effects for nearby players. */
-    private boolean expireGround(Entity entity, ItemStack stack, PluginConfig config) {
-        ItemExpireEvent event = new ItemExpireEvent(stack, null);
-        Bukkit.getPluginManager().callEvent(event);
-        if (event.isCancelled()) {
-            return false;
-        }
-        plugin.recoveryStore().record(stack, null, entity.getWorld());
-        Location center = entity.getLocation();
-        Player nearby = ExpiryListener.nearestPlayer(center, 20.0);
-        // remove first so the sound/particle reads as the item vanishing
-        if (config.isSoundEnabled() && nearby != null) {
-            nearby.playSound(nearby.getLocation(), config.getSoundName(),
-                    config.getSoundVolume(), config.getSoundPitch());
-        }
-        if (config.isParticleEnabled() && nearby != null) {
-            ParticleCompat.spawnAt(nearby, center, config.getParticleName(), config.getParticleCount());
-        }
-        for (String command : config.getExpiryCommands()) {
-            if (command.contains("{player}")) {
-                continue; // ground expiry has no player to substitute
-            }
-            String cmd = command.startsWith("/") ? command.substring(1) : command;
-            if (!cmd.isEmpty()) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-            }
-        }
-        return true;
     }
 }

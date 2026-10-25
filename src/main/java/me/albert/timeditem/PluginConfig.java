@@ -3,7 +3,10 @@ package me.albert.timeditem;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,6 +64,7 @@ public final class PluginConfig {
     private boolean expireCheckEnabled;
     private int expireCheckSeconds;
     private boolean scanWorldItems;
+    private boolean ignoreCreative;
     private boolean warningEnabled;
     private int warningSeconds;
     private List<Integer> warningStages;
@@ -82,6 +86,32 @@ public final class PluginConfig {
     private boolean recoveryEnabled;
     private int recoveryMaxItems;
     private int recoveryKeepDays;
+    private boolean discordWebhookEnabled;
+    private String discordWebhookUrl;
+    private String discordWebhookUsername;
+    private String discordWebhookMessage;
+    private String guiMenuTitle;
+    private String guiPresetLore;
+    private String guiToggleName;
+    private String guiToggleLore;
+    private String guiRemoveName;
+    private String guiRemoveLore;
+    private String guiCloseName;
+    private String guiStatusName;
+    private String guiStatusNoTimer;
+    private String guiStatusTypeExpire;
+    private String guiStatusTypePaused;
+    private String guiStatusTypeLifetime;
+    private String guiStatusRemaining;
+    private String guiStatusExpiresAt;
+    private String guiStatusDuration;
+    private String guiRestoreTitle;
+    private String guiRestoreDate;
+    private String guiRestorePlayer;
+    private String guiRestoreWorld;
+    private String guiRestoreClick;
+    private String guiRestorePrev;
+    private String guiRestoreNext;
     private Set<Material> blacklistedMaterials;
 
     public PluginConfig(TimedItemPlugin plugin) {
@@ -91,46 +121,20 @@ public final class PluginConfig {
     public void load() {
         plugin.saveDefaultConfig();
         FileConfiguration raw = plugin.getConfig();
-        raw.addDefault("config-version", 5);
-        raw.addDefault("Messages.prefix", "&6[TimedItem] &r");
-        raw.addDefault("Messages.expire", "&cYour item has expired and was removed!");
-        raw.addDefault("Messages.expire_soon", "&eYour item will expire in &c{time}&e!");
-        raw.addDefault("Messages.no_item", "&cHold the item you want to manage first.");
-        raw.addDefault("Messages.player_only", "&cOnly players can use this command.");
-        raw.addDefault("Messages.no_timer", "&7The item in your hand has no timer.");
-        raw.addDefault("Messages.item_cleared", "&aTimer removed from the item in your hand.");
-        raw.addDefault("Messages.time_added", "&aTime added. Remaining: &e{time}");
-        raw.addDefault("Messages.timer_paused", "&aTimer paused with &e{time}&a remaining.");
-        raw.addDefault("Messages.timer_resumed", "&aTimer resumed. Expires in &e{time}&a.");
-        raw.addDefault("Messages.timer_not_started", "&7The timer on this item has not started yet.");
-        raw.addDefault("Messages.already_paused", "&7The timer on this item is already paused.");
-        raw.addDefault("Messages.already_running", "&7The timer on this item is already running.");
-        raw.addDefault("Messages.invalid_usage",
-                "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload");
-        raw.addDefault("Messages.config_reload", "&aTimedItem config reloaded.");
-        raw.addDefault("Messages.time_set", "&aTimer set: &e{time}");
-        raw.addDefault("Messages.info_remaining", "&7Time remaining: &e{time}");
-        raw.addDefault("Messages.info_lifetime", "&7Lifetime: &e{time} &7(starts on first use)");
-        raw.addDefault("Messages.give_sent", "&aGave a timed item (&e{time}&a) to &e{player}&a.");
-        raw.addDefault("Messages.give_received", "&aYou received a timed item expiring in &e{time}&a.");
-        raw.addDefault("Messages.target_not_found", "&cPlayer &e{player} &cis not online.");
-        raw.addDefault("Messages.material_blacklisted", "&cThis item's material cannot carry a TimedItem timer.");
-        raw.addDefault("Messages.restore_given", "&aRecovered the item from the expiry log.");
-        raw.addDefault("Messages.restore_empty", "&7The expiry recovery log is empty.");
-        raw.addDefault("Messages.update_available", "&eTimedItem &6{version} &eis available: &7{url}");
-        raw.addDefault("DateFormat.expires_at", "&cExpires: ");
-        raw.addDefault("DateFormat.useful_life", "&7Lifetime: ");
-        raw.addDefault("DateFormat.paused", "&7Paused: ");
-        raw.addDefault("DateFormat.s", "s");
-        raw.addDefault("DateFormat.m", "m");
-        raw.addDefault("DateFormat.h", "h");
-        raw.addDefault("DateFormat.d", "d");
+        raw.addDefault("config-version", 7);
+        raw.addDefault("Settings.language", "en");
         raw.addDefault("Settings.start_date_calculate_on_click", true);
         raw.addDefault("Settings.reset_player_health_if_armor", true);
         raw.addDefault("Settings.metrics", true);
         raw.addDefault("Settings.expire_check.enabled", true);
         raw.addDefault("Settings.expire_check.interval_seconds", 10);
         raw.addDefault("Settings.expire_check.scan_world_items", false);
+        raw.addDefault("Settings.expire_check.ignore_creative", true);
+        raw.addDefault("Settings.discord_webhook.enabled", false);
+        raw.addDefault("Settings.discord_webhook.url", "");
+        raw.addDefault("Settings.discord_webhook.username", "TimedItem");
+        raw.addDefault("Settings.discord_webhook.message",
+                "{player}'s timed item expired: {item} ({world})");
         raw.addDefault("Settings.warning.enabled", true);
         raw.addDefault("Settings.warning.seconds", 60);
         raw.addDefault("Settings.warning.stages", Collections.singletonList(60));
@@ -156,46 +160,7 @@ public final class PluginConfig {
         raw.options().copyDefaults(true);
         plugin.saveConfig();
 
-        prefix = color(raw.getString("Messages.prefix"));
-        expire = color(raw.getString("Messages.expire"));
-        expireSoon = color(raw.getString("Messages.expire_soon"));
-        noItem = color(raw.getString("Messages.no_item"));
-        playerOnly = color(raw.getString("Messages.player_only"));
-        noTimer = color(raw.getString("Messages.no_timer"));
-        itemCleared = color(raw.getString("Messages.item_cleared"));
-        timeAdded = color(raw.getString("Messages.time_added"));
-        timerPaused = color(raw.getString("Messages.timer_paused"));
-        timerResumed = color(raw.getString("Messages.timer_resumed"));
-        timerNotStarted = color(raw.getString("Messages.timer_not_started"));
-        alreadyPaused = color(raw.getString("Messages.already_paused"));
-        alreadyRunning = color(raw.getString("Messages.already_running"));
-        invalidUsage = color(raw.getString("Messages.invalid_usage"));
-        configReload = color(raw.getString("Messages.config_reload"));
-        timeSet = color(raw.getString("Messages.time_set"));
-        infoRemaining = color(raw.getString("Messages.info_remaining"));
-        infoLifetime = color(raw.getString("Messages.info_lifetime"));
-        giveSent = color(raw.getString("Messages.give_sent"));
-        giveReceived = color(raw.getString("Messages.give_received"));
-        targetNotFound = color(raw.getString("Messages.target_not_found"));
-        materialBlacklisted = color(raw.getString("Messages.material_blacklisted"));
-        restoreGiven = color(raw.getString("Messages.restore_given"));
-        restoreEmpty = color(raw.getString("Messages.restore_empty"));
-        updateAvailable = color(raw.getString("Messages.update_available"));
-
-        expiresAtPrefix = color(raw.getString("DateFormat.expires_at"));
-        usefulLifePrefix = color(raw.getString("DateFormat.useful_life"));
-        pausedPrefix = color(raw.getString("DateFormat.paused"));
-        unitS = raw.getString("DateFormat.s");
-        unitM = raw.getString("DateFormat.m");
-        unitH = raw.getString("DateFormat.h");
-        unitD = raw.getString("DateFormat.d");
-
-        Map<String, Long> units = new HashMap<String, Long>();
-        units.put(unitS.toLowerCase(Locale.ROOT), 1L);
-        units.put(unitM.toLowerCase(Locale.ROOT), 60L);
-        units.put(unitH.toLowerCase(Locale.ROOT), 3600L);
-        units.put(unitD.toLowerCase(Locale.ROOT), 86400L);
-        unitSeconds = Collections.unmodifiableMap(units);
+        FileConfiguration lang = loadLanguage(raw);
 
         startDateCalculateOnClick = raw.getBoolean("Settings.start_date_calculate_on_click", true);
         resetPlayerHealthIfArmor = raw.getBoolean("Settings.reset_player_health_if_armor", true);
@@ -203,6 +168,13 @@ public final class PluginConfig {
         expireCheckEnabled = raw.getBoolean("Settings.expire_check.enabled", true);
         expireCheckSeconds = Math.max(1, raw.getInt("Settings.expire_check.interval_seconds", 10));
         scanWorldItems = raw.getBoolean("Settings.expire_check.scan_world_items", false);
+        ignoreCreative = raw.getBoolean("Settings.expire_check.ignore_creative", true);
+        discordWebhookEnabled = raw.getBoolean("Settings.discord_webhook.enabled", false);
+        String webhookUrl = raw.getString("Settings.discord_webhook.url", "");
+        discordWebhookUrl = webhookUrl == null ? "" : webhookUrl.trim();
+        discordWebhookUsername = raw.getString("Settings.discord_webhook.username", "TimedItem");
+        discordWebhookMessage = raw.getString("Settings.discord_webhook.message",
+                "{player}'s timed item expired: {item} ({world})");
         warningEnabled = raw.getBoolean("Settings.warning.enabled", true);
         warningSeconds = Math.max(1, raw.getInt("Settings.warning.seconds", 60));
         // Multiple thresholds fire one warning each as the item counts
@@ -249,6 +221,72 @@ public final class PluginConfig {
             }
         }
         blacklistedMaterials = Collections.unmodifiableSet(blacklisted);
+
+        // GUI labels also come from the language file.
+        guiMenuTitle = color(lang.getString("Gui.menu_title"));
+        guiPresetLore = color(lang.getString("Gui.preset_lore"));
+        guiToggleName = color(lang.getString("Gui.toggle_name"));
+        guiToggleLore = color(lang.getString("Gui.toggle_lore"));
+        guiRemoveName = color(lang.getString("Gui.remove_name"));
+        guiRemoveLore = color(lang.getString("Gui.remove_lore"));
+        guiCloseName = color(lang.getString("Gui.close_name"));
+        guiStatusName = color(lang.getString("Gui.status_name"));
+        guiStatusNoTimer = color(lang.getString("Gui.status_no_timer"));
+        guiStatusTypeExpire = color(lang.getString("Gui.status_type_expire"));
+        guiStatusTypePaused = color(lang.getString("Gui.status_type_paused"));
+        guiStatusTypeLifetime = color(lang.getString("Gui.status_type_lifetime"));
+        guiStatusRemaining = color(lang.getString("Gui.status_remaining"));
+        guiStatusExpiresAt = color(lang.getString("Gui.status_expires_at"));
+        guiStatusDuration = color(lang.getString("Gui.status_duration"));
+        guiRestoreTitle = color(lang.getString("Gui.restore_title"));
+        guiRestoreDate = color(lang.getString("Gui.restore_date"));
+        guiRestorePlayer = color(lang.getString("Gui.restore_player"));
+        guiRestoreWorld = color(lang.getString("Gui.restore_world"));
+        guiRestoreClick = color(lang.getString("Gui.restore_click"));
+        guiRestorePrev = color(lang.getString("Gui.restore_prev"));
+        guiRestoreNext = color(lang.getString("Gui.restore_next"));
+
+        // Messages and lore format come from the language file, not config.yml.
+        prefix = color(lang.getString("Messages.prefix"));
+        expire = color(lang.getString("Messages.expire"));
+        expireSoon = color(lang.getString("Messages.expire_soon"));
+        noItem = color(lang.getString("Messages.no_item"));
+        playerOnly = color(lang.getString("Messages.player_only"));
+        noTimer = color(lang.getString("Messages.no_timer"));
+        itemCleared = color(lang.getString("Messages.item_cleared"));
+        timeAdded = color(lang.getString("Messages.time_added"));
+        timerPaused = color(lang.getString("Messages.timer_paused"));
+        timerResumed = color(lang.getString("Messages.timer_resumed"));
+        timerNotStarted = color(lang.getString("Messages.timer_not_started"));
+        alreadyPaused = color(lang.getString("Messages.already_paused"));
+        alreadyRunning = color(lang.getString("Messages.already_running"));
+        invalidUsage = color(lang.getString("Messages.invalid_usage"));
+        configReload = color(lang.getString("Messages.config_reload"));
+        timeSet = color(lang.getString("Messages.time_set"));
+        infoRemaining = color(lang.getString("Messages.info_remaining"));
+        infoLifetime = color(lang.getString("Messages.info_lifetime"));
+        giveSent = color(lang.getString("Messages.give_sent"));
+        giveReceived = color(lang.getString("Messages.give_received"));
+        targetNotFound = color(lang.getString("Messages.target_not_found"));
+        materialBlacklisted = color(lang.getString("Messages.material_blacklisted"));
+        restoreGiven = color(lang.getString("Messages.restore_given"));
+        restoreEmpty = color(lang.getString("Messages.restore_empty"));
+        updateAvailable = color(lang.getString("Messages.update_available"));
+
+        expiresAtPrefix = color(lang.getString("DateFormat.expires_at"));
+        usefulLifePrefix = color(lang.getString("DateFormat.useful_life"));
+        pausedPrefix = color(lang.getString("DateFormat.paused"));
+        unitS = lang.getString("DateFormat.s", "s");
+        unitM = lang.getString("DateFormat.m", "m");
+        unitH = lang.getString("DateFormat.h", "h");
+        unitD = lang.getString("DateFormat.d", "d");
+
+        Map<String, Long> units = new HashMap<String, Long>();
+        units.put(unitS.toLowerCase(Locale.ROOT), 1L);
+        units.put(unitM.toLowerCase(Locale.ROOT), 60L);
+        units.put(unitH.toLowerCase(Locale.ROOT), 3600L);
+        units.put(unitD.toLowerCase(Locale.ROOT), 86400L);
+        unitSeconds = Collections.unmodifiableMap(units);
     }
 
     public static String color(String text) {
@@ -412,6 +450,11 @@ public final class PluginConfig {
         return scanWorldItems;
     }
 
+    /** True when creative players are skipped entirely (no expiry, no countdown). */
+    public boolean isIgnoreCreative() {
+        return ignoreCreative;
+    }
+
     public boolean isWarningEnabled() {
         return warningEnabled;
     }
@@ -497,8 +540,232 @@ public final class PluginConfig {
         return recoveryKeepDays;
     }
 
+    public boolean isDiscordWebhookEnabled() {
+        return discordWebhookEnabled;
+    }
+
+    public String getDiscordWebhookUrl() {
+        return discordWebhookUrl;
+    }
+
+    public String getDiscordWebhookUsername() {
+        return discordWebhookUsername;
+    }
+
+    public String getDiscordWebhookMessage() {
+        return discordWebhookMessage;
+    }
+
+    public String getGuiMenuTitle() {
+        return guiMenuTitle;
+    }
+
+    public String getGuiPresetLore() {
+        return guiPresetLore;
+    }
+
+    public String getGuiToggleName() {
+        return guiToggleName;
+    }
+
+    public String getGuiToggleLore() {
+        return guiToggleLore;
+    }
+
+    public String getGuiRemoveName() {
+        return guiRemoveName;
+    }
+
+    public String getGuiRemoveLore() {
+        return guiRemoveLore;
+    }
+
+    public String getGuiCloseName() {
+        return guiCloseName;
+    }
+
+    public String getGuiStatusName() {
+        return guiStatusName;
+    }
+
+    public String getGuiStatusNoTimer() {
+        return guiStatusNoTimer;
+    }
+
+    public String getGuiStatusTypeExpire() {
+        return guiStatusTypeExpire;
+    }
+
+    public String getGuiStatusTypePaused() {
+        return guiStatusTypePaused;
+    }
+
+    public String getGuiStatusTypeLifetime() {
+        return guiStatusTypeLifetime;
+    }
+
+    public String getGuiStatusRemaining() {
+        return guiStatusRemaining;
+    }
+
+    public String getGuiStatusExpiresAt() {
+        return guiStatusExpiresAt;
+    }
+
+    public String getGuiStatusDuration() {
+        return guiStatusDuration;
+    }
+
+    public String getGuiRestoreTitle() {
+        return guiRestoreTitle;
+    }
+
+    public String getGuiRestoreDate() {
+        return guiRestoreDate;
+    }
+
+    public String getGuiRestorePlayer() {
+        return guiRestorePlayer;
+    }
+
+    public String getGuiRestoreWorld() {
+        return guiRestoreWorld;
+    }
+
+    public String getGuiRestoreClick() {
+        return guiRestoreClick;
+    }
+
+    public String getGuiRestorePrev() {
+        return guiRestorePrev;
+    }
+
+    public String getGuiRestoreNext() {
+        return guiRestoreNext;
+    }
+
     /** Materials that may never receive a timer. */
     public Set<Material> blacklistedMaterials() {
         return blacklistedMaterials;
+    }
+
+    /**
+     * Loads lang/messages_&lt;language&gt;.yml (Settings.language). Old
+     * installs carry their messages inside config.yml - those values are
+     * carried over into the language file once and removed from
+     * config.yml, so user edits survive the move. Missing keys self-heal
+     * from the built-in English defaults and are written back.
+     */
+    private FileConfiguration loadLanguage(FileConfiguration raw) {
+        String language = raw.getString("Settings.language", "en");
+        if (language == null || !language.matches("[a-z0-9_-]+")) {
+            language = "en";
+        }
+        String path = "lang/messages_" + language + ".yml";
+        File file = new File(plugin.getDataFolder(), path);
+        if (!file.exists()) {
+            try {
+                plugin.saveResource(path, false);
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Unknown language '" + language + "' - using English.");
+                path = "lang/messages_en.yml";
+                file = new File(plugin.getDataFolder(), path);
+                if (!file.exists()) {
+                    plugin.saveResource(path, false);
+                }
+            }
+        }
+        YamlConfiguration lang = YamlConfiguration.loadConfiguration(file);
+
+        boolean migrated = false;
+        if (raw.isSet("Messages")) {
+            for (String key : raw.getConfigurationSection("Messages").getKeys(true)) {
+                lang.set("Messages." + key, raw.get("Messages." + key));
+            }
+            raw.set("Messages", null);
+            migrated = true;
+        }
+        if (raw.isSet("DateFormat")) {
+            for (String key : raw.getConfigurationSection("DateFormat").getKeys(true)) {
+                lang.set("DateFormat." + key, raw.get("DateFormat." + key));
+            }
+            raw.set("DateFormat", null);
+            migrated = true;
+        }
+        if (migrated) {
+            plugin.saveConfig();
+            plugin.getLogger().info("Moved messages from config.yml to " + path
+                    + " - edit that file from now on.");
+        }
+
+        lang.options().copyDefaults(true);
+        addMessageDefaults(lang);
+        try {
+            lang.save(file);
+        } catch (IOException e) {
+            plugin.getLogger().warning("Could not save " + path + ": " + e);
+        }
+        return lang;
+    }
+
+    /** Built-in English fallbacks for every message key (self-healing). */
+    private static void addMessageDefaults(FileConfiguration lang) {
+        lang.addDefault("Messages.prefix", "&6[TimedItem] &r");
+        lang.addDefault("Messages.expire", "&cYour item has expired and was removed!");
+        lang.addDefault("Messages.expire_soon", "&eYour item will expire in &c{time}&e!");
+        lang.addDefault("Messages.no_item", "&cHold the item you want to manage first.");
+        lang.addDefault("Messages.player_only", "&cOnly players can use this command.");
+        lang.addDefault("Messages.no_timer", "&7The item in your hand has no timer.");
+        lang.addDefault("Messages.item_cleared", "&aTimer removed from the item in your hand.");
+        lang.addDefault("Messages.time_added", "&aTime added. Remaining: &e{time}");
+        lang.addDefault("Messages.timer_paused", "&aTimer paused with &e{time}&a remaining.");
+        lang.addDefault("Messages.timer_resumed", "&aTimer resumed. Expires in &e{time}&a.");
+        lang.addDefault("Messages.timer_not_started", "&7The timer on this item has not started yet.");
+        lang.addDefault("Messages.already_paused", "&7The timer on this item is already paused.");
+        lang.addDefault("Messages.already_running", "&7The timer on this item is already running.");
+        lang.addDefault("Messages.invalid_usage",
+                "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload");
+        lang.addDefault("Messages.config_reload", "&aTimedItem config reloaded.");
+        lang.addDefault("Messages.time_set", "&aTimer set: &e{time}");
+        lang.addDefault("Messages.info_remaining", "&7Time remaining: &e{time}");
+        lang.addDefault("Messages.info_lifetime", "&7Lifetime: &e{time} &7(starts on first use)");
+        lang.addDefault("Messages.give_sent", "&aGave a timed item (&e{time}&a) to &e{player}&a.");
+        lang.addDefault("Messages.give_received", "&aYou received a timed item expiring in &e{time}&a.");
+        lang.addDefault("Messages.target_not_found", "&cPlayer &e{player} &cis not online.");
+        lang.addDefault("Messages.material_blacklisted",
+                "&cThis item's material cannot carry a TimedItem timer.");
+        lang.addDefault("Messages.restore_given", "&aRecovered the item from the expiry log.");
+        lang.addDefault("Messages.restore_empty", "&7The expiry recovery log is empty.");
+        lang.addDefault("Messages.update_available",
+                "&eTimedItem &6{version} &eis available: &7{url}");
+        lang.addDefault("DateFormat.expires_at", "&cExpires: ");
+        lang.addDefault("DateFormat.useful_life", "&7Lifetime: ");
+        lang.addDefault("DateFormat.paused", "&7Paused: ");
+        lang.addDefault("DateFormat.s", "s");
+        lang.addDefault("DateFormat.m", "m");
+        lang.addDefault("DateFormat.h", "h");
+        lang.addDefault("DateFormat.d", "d");
+        lang.addDefault("Gui.menu_title", "&6TimedItem Menu");
+        lang.addDefault("Gui.preset_lore", "&7Set this lifetime on the item in your hand");
+        lang.addDefault("Gui.toggle_name", "&6Pause / Resume");
+        lang.addDefault("Gui.toggle_lore", "&7Freeze the countdown, or resume a paused item");
+        lang.addDefault("Gui.remove_name", "&cRemove timer");
+        lang.addDefault("Gui.remove_lore", "&7Strip the timer from the item in your hand");
+        lang.addDefault("Gui.close_name", "&cClose");
+        lang.addDefault("Gui.status_name", "&6Held item status");
+        lang.addDefault("Gui.status_no_timer", "&7Held item: &cno timer");
+        lang.addDefault("Gui.status_type_expire", "&7Type: &eexpire");
+        lang.addDefault("Gui.status_type_paused", "&7Type: &epaused");
+        lang.addDefault("Gui.status_type_lifetime", "&7Type: &elifetime (not started)");
+        lang.addDefault("Gui.status_remaining", "&7Remaining: &e{time}");
+        lang.addDefault("Gui.status_expires_at", "&7Expires at: &e{date}");
+        lang.addDefault("Gui.status_duration", "&7Duration: &e{time}");
+        lang.addDefault("Gui.restore_title", "&8TimedItem Restore &7({page}/{pages})");
+        lang.addDefault("Gui.restore_date", "&8{date}");
+        lang.addDefault("Gui.restore_player", "&7Player: &e{player}");
+        lang.addDefault("Gui.restore_world", "&7World: &e{world}");
+        lang.addDefault("Gui.restore_click", "&aClick to recover");
+        lang.addDefault("Gui.restore_prev", "&ePrevious page");
+        lang.addDefault("Gui.restore_next", "&eNext page");
     }
 }
