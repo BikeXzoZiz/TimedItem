@@ -12,6 +12,7 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 
 import java.time.LocalDateTime;
+import java.util.logging.Level;
 
 /**
  * Periodically scans every online player's inventory for expired items,
@@ -33,6 +34,16 @@ public final class ExpiryCheckTask implements Runnable {
 
     @Override
     public void run() {
+        try {
+            runCheck();
+        } catch (Throwable t) {
+            // keep the timer alive for the next tick, but make the failure
+            // visible and captured by the DebugLog buffer for /ti debug export
+            plugin.getLogger().log(Level.WARNING, "Expiry check failed: " + t, t);
+        }
+    }
+
+    private void runCheck() {
         PluginConfig config = plugin.pluginConfig();
         if (SchedulerCompat.isFolia()) {
             // Touching inventories is only legal on the owning region, so

@@ -17,7 +17,7 @@ Messages:
   timer_not_started: "&7ตัวจับเวลาบนไอเทมนี้ยังไม่เริ่มนับ"
   already_paused: "&7ตัวจับเวลาบนไอเทมนี้หยุดอยู่แล้ว"
   already_running: "&7ตัวจับเวลาบนไอเทมนี้นับอยู่แล้ว"
-  invalid_usage: "&cวิธีใช้: /ti set <เวลา>, /ti add <เวลา>, /ti give <ผู้เล่น> <เวลา> [จำนวน], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload"
+  invalid_usage: "&cวิธีใช้: /ti set <เวลา>, /ti add <เวลา>, /ti give <ผู้เล่น> <เวลา> [จำนวน], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload"
   config_reload: "&aโหลด config ของ TimedItem ใหม่แล้ว"
   time_set: "&aตั้งตัวจับเวลา: &e{time}"
   info_remaining: "&7เวลาที่เหลือ: &e{time}"
@@ -29,6 +29,12 @@ Messages:
   restore_given: "&aคืนไอเทมจากบันทึกการหมดอายุแล้ว"
   restore_empty: "&7บันทึกการกู้คืนยังว่างอยู่"
   update_available: "&eTimedItem &6{version} &eมีเวอร์ชันใหม่แล้ว: &7{url}"
+  debug_status: "&7โหมด debug: &e{state}&7 log ที่เก็บไว้: &e{entries}&7 รายการกู้คืน: &e{recovery}&7 ที่เก็บข้อมูลไอเทม: &e{storage}&7"
+  debug_on: "&aเปิดโหมด debug แล้ว - log แบบละเอียดของ TimedItem จะแสดงในคอนโซล ใช้ /ti debug export เพื่อเขียนไฟล์รายงานบั๊ก"
+  debug_off: "&7ปิดโหมด debug แล้ว"
+  debug_exported: "&aเขียนรายงาน debug ไปที่ &e{file}"
+  debug_export_failed: "&cเขียนรายงาน debug ไม่สำเร็จ: &7{error}"
+  debug_usage: "&7วิธีใช้: /ti debug [on|off|export]"
 
 DateFormat:
   # Prefix ที่เขียนลง lore ของไอเทม — ห้ามแก้หลังมีไอเทมที่มี timer อยู่แล้ว

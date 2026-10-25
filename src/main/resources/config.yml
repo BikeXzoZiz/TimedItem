@@ -17,6 +17,13 @@ Settings:
   reset_player_health_if_armor: true
   # Anonymous usage statistics via bStats (https://bstats.org)
   metrics: true
+  # Verbose diagnostics for hunting bugs: extra [Debug] lines in the
+  # console (silent fallbacks, every expiry, recovery writes). Toggle it
+  # for one session with /ti debug on|off - that does not write back
+  # here, reload/restart returns to this value. /ti debug export writes
+  # a bug report file to plugins/TimedItem/debug/ (the Discord webhook
+  # URL is never included in reports).
+  debug: false
   expire_check:
     # Also check every online player's inventory periodically, instead of
     # only on inventory click / item use / join / damage events.

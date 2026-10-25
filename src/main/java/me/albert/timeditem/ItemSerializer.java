@@ -54,7 +54,7 @@ public final class ItemSerializer {
                 return new Encoded(Base64.getEncoder()
                         .encodeToString((byte[]) serializeAsBytes.invoke(item)), FORMAT_NBT);
             } catch (Exception ignored) {
-                // fall through to the legacy path
+                DebugLog.verbose("NBT encode failed, falling back to legacy: " + ignored);
             }
         }
         try {
@@ -64,6 +64,7 @@ public final class ItemSerializer {
             out.close();
             return new Encoded(Base64.getEncoder().encodeToString(bytes.toByteArray()), FORMAT_LEGACY);
         } catch (Exception e) {
+            DebugLog.verbose("Item encode failed: " + e);
             return null;
         }
     }
@@ -88,7 +89,7 @@ public final class ItemSerializer {
             try {
                 return (ItemStack) deserializeBytes.invoke(null, Base64.getDecoder().decode(base64));
             } catch (Exception ignored) {
-                // fall through to the legacy path
+                DebugLog.verbose("NBT decode failed, falling back to legacy: " + ignored);
             }
         }
         try {
@@ -98,6 +99,7 @@ public final class ItemSerializer {
             in.close();
             return item;
         } catch (Exception e) {
+            DebugLog.verbose("Item decode failed: " + e);
             return null;
         }
     }

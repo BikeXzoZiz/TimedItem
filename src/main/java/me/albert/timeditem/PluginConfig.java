@@ -48,6 +48,12 @@ public final class PluginConfig {
     private String restoreGiven;
     private String restoreEmpty;
     private String updateAvailable;
+    private String debugStatus;
+    private String debugOn;
+    private String debugOff;
+    private String debugExported;
+    private String debugExportFailed;
+    private String debugUsage;
 
     private String expiresAtPrefix;
     private String usefulLifePrefix;
@@ -61,6 +67,7 @@ public final class PluginConfig {
     private boolean startDateCalculateOnClick;
     private boolean resetPlayerHealthIfArmor;
     private boolean metricsEnabled;
+    private boolean debugMode;
     private boolean expireCheckEnabled;
     private int expireCheckSeconds;
     private boolean scanWorldItems;
@@ -126,6 +133,7 @@ public final class PluginConfig {
         raw.addDefault("Settings.start_date_calculate_on_click", true);
         raw.addDefault("Settings.reset_player_health_if_armor", true);
         raw.addDefault("Settings.metrics", true);
+        raw.addDefault("Settings.debug", false);
         raw.addDefault("Settings.expire_check.enabled", true);
         raw.addDefault("Settings.expire_check.interval_seconds", 10);
         raw.addDefault("Settings.expire_check.scan_world_items", false);
@@ -165,6 +173,7 @@ public final class PluginConfig {
         startDateCalculateOnClick = raw.getBoolean("Settings.start_date_calculate_on_click", true);
         resetPlayerHealthIfArmor = raw.getBoolean("Settings.reset_player_health_if_armor", true);
         metricsEnabled = raw.getBoolean("Settings.metrics", true);
+        debugMode = raw.getBoolean("Settings.debug", false);
         expireCheckEnabled = raw.getBoolean("Settings.expire_check.enabled", true);
         expireCheckSeconds = Math.max(1, raw.getInt("Settings.expire_check.interval_seconds", 10));
         scanWorldItems = raw.getBoolean("Settings.expire_check.scan_world_items", false);
@@ -272,6 +281,13 @@ public final class PluginConfig {
         restoreGiven = color(lang.getString("Messages.restore_given"));
         restoreEmpty = color(lang.getString("Messages.restore_empty"));
         updateAvailable = color(lang.getString("Messages.update_available"));
+
+        debugStatus = color(lang.getString("Messages.debug_status"));
+        debugOn = color(lang.getString("Messages.debug_on"));
+        debugOff = color(lang.getString("Messages.debug_off"));
+        debugExported = color(lang.getString("Messages.debug_exported"));
+        debugExportFailed = color(lang.getString("Messages.debug_export_failed"));
+        debugUsage = color(lang.getString("Messages.debug_usage"));
 
         expiresAtPrefix = color(lang.getString("DateFormat.expires_at"));
         usefulLifePrefix = color(lang.getString("DateFormat.useful_life"));
@@ -393,6 +409,30 @@ public final class PluginConfig {
         return updateAvailable;
     }
 
+    public String getDebugStatus() {
+        return debugStatus;
+    }
+
+    public String getDebugOn() {
+        return debugOn;
+    }
+
+    public String getDebugOff() {
+        return debugOff;
+    }
+
+    public String getDebugExported() {
+        return debugExported;
+    }
+
+    public String getDebugExportFailed() {
+        return debugExportFailed;
+    }
+
+    public String getDebugUsage() {
+        return debugUsage;
+    }
+
     public String getExpiresAtPrefix() {
         return expiresAtPrefix;
     }
@@ -436,6 +476,11 @@ public final class PluginConfig {
 
     public boolean isMetricsEnabled() {
         return metricsEnabled;
+    }
+
+    /** Verbose [Debug] logging; a session switch on top of Settings.debug. */
+    public boolean isDebugEnabled() {
+        return debugMode;
     }
 
     public boolean isExpireCheckEnabled() {
@@ -724,7 +769,7 @@ public final class PluginConfig {
         lang.addDefault("Messages.already_paused", "&7The timer on this item is already paused.");
         lang.addDefault("Messages.already_running", "&7The timer on this item is already running.");
         lang.addDefault("Messages.invalid_usage",
-                "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload");
+                "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload");
         lang.addDefault("Messages.config_reload", "&aTimedItem config reloaded.");
         lang.addDefault("Messages.time_set", "&aTimer set: &e{time}");
         lang.addDefault("Messages.info_remaining", "&7Time remaining: &e{time}");
@@ -738,6 +783,18 @@ public final class PluginConfig {
         lang.addDefault("Messages.restore_empty", "&7The expiry recovery log is empty.");
         lang.addDefault("Messages.update_available",
                 "&eTimedItem &6{version} &eis available: &7{url}");
+        lang.addDefault("Messages.debug_status",
+                "&7Debug mode: &e{state}&7. Buffered log entries: &e{entries}&7."
+                        + " Recovery entries: &e{recovery}&7. Item storage: &e{storage}&7.");
+        lang.addDefault("Messages.debug_on",
+                "&aDebug mode enabled - verbose TimedItem logging is now visible in the console."
+                        + " Use /ti debug export to write a bug report.");
+        lang.addDefault("Messages.debug_off", "&7Debug mode disabled.");
+        lang.addDefault("Messages.debug_exported",
+                "&aDebug report written to &e{file}");
+        lang.addDefault("Messages.debug_export_failed",
+                "&cCould not write the debug report: &7{error}");
+        lang.addDefault("Messages.debug_usage", "&7Usage: /ti debug [on|off|export]");
         lang.addDefault("DateFormat.expires_at", "&cExpires: ");
         lang.addDefault("DateFormat.useful_life", "&7Lifetime: ");
         lang.addDefault("DateFormat.paused", "&7Paused: ");

@@ -15,10 +15,12 @@ import java.util.Locale;
 public final class TimedItemTabCompleter implements TabCompleter {
 
     private static final List<String> SUBS = Arrays.asList(
-            "set", "add", "give", "pause", "resume", "remove", "info", "menu", "restore", "reload");
+            "set", "add", "give", "pause", "resume", "remove", "info", "menu", "restore",
+            "debug", "reload");
     private static final List<String> TIME_HINTS =
             Arrays.asList("60s", "5m", "30m", "1h", "6h", "1d", "1d12h", "7d", "30d");
     private static final List<String> AMOUNT_HINTS = Arrays.asList("1", "16", "32", "64");
+    private static final List<String> DEBUG_HINTS = Arrays.asList("on", "off", "export");
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
@@ -47,6 +49,10 @@ public final class TimedItemTabCompleter implements TabCompleter {
         } else if (sub.equals("restore")) {
             if (args.length == 2) {
                 filter(Arrays.asList("1", "2", "3"), args[1], out);
+            }
+        } else if (sub.equals("debug")) {
+            if (args.length == 2) {
+                filter(DEBUG_HINTS, args[1], out);
             }
         }
         return out;

@@ -8,8 +8,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -31,6 +35,8 @@ public final class TimedItemCommand implements CommandExecutor {
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals("reload")) {
             config.load();
+            // the session switch follows the config on every reload
+            DebugLog.setEnabled(config.isDebugEnabled());
             plugin.recoveryStore().load();
             plugin.startTasks();
             sender.sendMessage(config.getPrefix() + config.getConfigReload());
@@ -110,8 +116,67 @@ public final class TimedItemCommand implements CommandExecutor {
             handleInfo(sender, config);
             return true;
         }
+        if (sub.equals("debug")) {
+            handleDebug(sender, args, config);
+            return true;
+        }
         sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
         return true;
+    }
+
+    /**
+     * /ti debug [on|off|export] - without arguments prints the current
+     * debug state. on/off is a session switch that resets to
+     * Settings.debug on reload or restart; export writes a bug report
+     * file to plugins/TimedItem/debug/.
+     */
+    private void handleDebug(CommandSender sender, String[] args, PluginConfig config) {
+        if (args.length >= 2) {
+            String option = args[1].toLowerCase(Locale.ROOT);
+            if (option.equals("on")) {
+                DebugLog.setEnabled(true);
+                sender.sendMessage(config.getPrefix() + config.getDebugOn());
+                return;
+            }
+            if (option.equals("off")) {
+                DebugLog.setEnabled(false);
+                sender.sendMessage(config.getPrefix() + config.getDebugOff());
+                return;
+            }
+            if (option.equals("export")) {
+                exportDebugReport(sender, config);
+                return;
+            }
+            sender.sendMessage(config.getPrefix() + config.getDebugUsage());
+            return;
+        }
+        sender.sendMessage(config.getPrefix() + config.getDebugStatus()
+                .replace("{state}", DebugLog.isEnabled() ? "on" : "off")
+                .replace("{entries}", String.valueOf(DebugLog.size()))
+                .replace("{recovery}", String.valueOf(plugin.recoveryStore().size()))
+                .replace("{storage}", PdcCompat.isAvailable() ? "PDC" : "lore"));
+        sender.sendMessage(config.getPrefix() + config.getDebugUsage());
+    }
+
+    /** Snapshots the state here (main/region thread), writes the file async. */
+    private void exportDebugReport(CommandSender sender, PluginConfig config) {
+        final DebugReport.Snapshot snapshot = DebugReport.snapshot(plugin);
+        final List<String> logLines = DebugLog.snapshot();
+        final File file = new File(new File(plugin.getDataFolder(), "debug"),
+                DebugReport.fileName());
+        SchedulerCompat.runAsync(plugin, () -> {
+            try {
+                Files.createDirectories(file.getParentFile().toPath());
+                Files.write(file.toPath(),
+                        DebugReport.render(snapshot, logLines).getBytes(StandardCharsets.UTF_8));
+                sender.sendMessage(config.getPrefix() + config.getDebugExported()
+                        .replace("{file}", file.getPath()));
+            } catch (Exception e) {
+                plugin.getLogger().warning("Could not write debug report: " + e);
+                sender.sendMessage(config.getPrefix() + config.getDebugExportFailed()
+                        .replace("{error}", String.valueOf(e.getMessage())));
+            }
+        });
     }
 
     private void handleSet(CommandSender sender, String[] args, PluginConfig config) {

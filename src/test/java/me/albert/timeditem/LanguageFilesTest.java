@@ -24,7 +24,9 @@ class LanguageFilesTest {
             "timer_not_started", "already_paused", "already_running", "invalid_usage",
             "config_reload", "time_set", "info_remaining", "info_lifetime",
             "give_sent", "give_received", "target_not_found", "material_blacklisted",
-            "restore_given", "restore_empty", "update_available"};
+            "restore_given", "restore_empty", "update_available",
+            "debug_status", "debug_on", "debug_off", "debug_exported",
+            "debug_export_failed", "debug_usage"};
 
     private static final String[] DATE_KEYS = {
             "expires_at", "useful_life", "paused", "s", "m", "h", "d"};

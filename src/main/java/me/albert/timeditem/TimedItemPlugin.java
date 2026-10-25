@@ -29,6 +29,8 @@ public final class TimedItemPlugin extends JavaPlugin {
         PdcCompat.init(this);
         config = new PluginConfig(this);
         config.load();
+        DebugLog.install(getLogger());
+        DebugLog.setEnabled(config.isDebugEnabled());
         listener = new ExpiryListener(this);
         Bukkit.getPluginManager().registerEvents(listener, this);
         menu = new TimedItemMenu(this);
@@ -114,6 +116,7 @@ public final class TimedItemPlugin extends JavaPlugin {
         if (foliaGroundExpiry != null) {
             foliaGroundExpiry.stop();
         }
+        DebugLog.uninstall();
     }
 
     private void cancelTask(SchedulerCompat.Handle handle) {

@@ -17,7 +17,7 @@ Messages:
   timer_not_started: "&7The timer on this item has not started yet."
   already_paused: "&7The timer on this item is already paused."
   already_running: "&7The timer on this item is already running."
-  invalid_usage: "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti reload"
+  invalid_usage: "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload"
   config_reload: "&aTimedItem config reloaded."
   time_set: "&aTimer set: &e{time}"
   info_remaining: "&7Time remaining: &e{time}"
@@ -29,6 +29,12 @@ Messages:
   restore_given: "&aRecovered the item from the expiry log."
   restore_empty: "&7The expiry recovery log is empty."
   update_available: "&eTimedItem &6{version} &eis available: &7{url}"
+  debug_status: "&7Debug mode: &e{state}&7. Buffered log entries: &e{entries}&7. Recovery entries: &e{recovery}&7. Item storage: &e{storage}&7."
+  debug_on: "&aDebug mode enabled - verbose TimedItem logging is now visible in the console. Use /ti debug export to write a bug report."
+  debug_off: "&7Debug mode disabled."
+  debug_exported: "&aDebug report written to &e{file}"
+  debug_export_failed: "&cCould not write the debug report: &7{error}"
+  debug_usage: "&7Usage: /ti debug [on|off|export]"
 
 DateFormat:
   # Lore prefixes shown on timed items. Changing these after items with

@@ -73,7 +73,7 @@ public final class PdcCompat {
             setMethod.invoke(container, valueKey, longType, value);
             item.setItemMeta(meta);
         } catch (Throwable ignored) {
-            // keep lore as the storage of record
+            DebugLog.verbose("PDC write failed (lore stays the storage of record): " + ignored);
         }
     }
 
@@ -98,6 +98,7 @@ public final class PdcCompat {
             }
             return new String[] {type, value.toString()};
         } catch (Throwable t) {
+            DebugLog.verbose("PDC read failed: " + t);
             return null;
         }
     }
@@ -116,7 +117,7 @@ public final class PdcCompat {
             removeMethod.invoke(container, valueKey);
             item.setItemMeta(meta);
         } catch (Throwable ignored) {
-            // nothing stored, nothing to do
+            DebugLog.verbose("PDC clear failed: " + ignored);
         }
     }
 }

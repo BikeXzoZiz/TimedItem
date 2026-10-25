@@ -48,6 +48,9 @@ public final class ExpiryService {
         if (event.isCancelled()) {
             return false;
         }
+        DebugLog.verbose("Expired " + item.getType()
+                + (player != null ? " from " + player.getName() : " (ground/frame)")
+                + (world != null ? " in " + world.getName() : ""));
         plugin.recoveryStore().record(item, player, world);
         removal.run();
         Player viewer = player;

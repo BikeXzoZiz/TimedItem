@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 /**
  * Rolling log of expired items so admins can hand them back with
@@ -152,6 +153,8 @@ public final class RecoveryStore {
                 encoded.format, encoded.base64, item.clone()));
         trim();
         save();
+        DebugLog.verbose("Recorded expired " + item.getType() + " in the recovery log ("
+                + entries.size() + " entries)");
     }
 
     /** Removes the entry (e.g. it was handed back via /ti restore). */
@@ -229,11 +232,13 @@ public final class RecoveryStore {
                 Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (Exception e) {
-            plugin.getLogger().warning("Could not write recovery log: " + e);
+            // the throwable goes into the capture buffer for /ti debug export
+            plugin.getLogger().log(Level.WARNING, "Could not write recovery log: " + e, e);
         }
     }
 
-    private Path file() {
+    /** Path of the recovery log; also read by the debug report export. */
+    public Path file() {
         return plugin.getDataFolder().toPath().resolve("recovery.log");
     }
 }
