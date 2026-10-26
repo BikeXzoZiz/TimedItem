@@ -1,6 +1,8 @@
 package me.albert.timeditem;
 
+import me.albert.timeditem.storage.AuditRecord;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -11,13 +13,27 @@ import org.bukkit.inventory.ItemStack;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 public final class TimedItemCommand implements CommandExecutor {
+
+    /** Audit entries shown per page of /ti audit. */
+    private static final int AUDIT_PAGE_SIZE = 10;
+    /** Cap for /ti stats materials listed. */
+    private static final int STATS_TOP = 10;
 
     private final TimedItemPlugin plugin;
 
@@ -89,6 +105,7 @@ public final class TimedItemCommand implements CommandExecutor {
                 if (item != null) {
                     TimeLore.removeTimer(item, config);
                     player.sendMessage(config.getPrefix() + config.getItemCleared());
+                    audit(player, AuditRecord.REMOVE, player.getName(), item, null, config);
                 }
             }
             return true;
@@ -119,6 +136,18 @@ public final class TimedItemCommand implements CommandExecutor {
         }
         if (sub.equals("debug")) {
             handleDebug(sender, args, config);
+            return true;
+        }
+        if (sub.equals("find")) {
+            handleFind(sender, args, config);
+            return true;
+        }
+        if (sub.equals("stats")) {
+            handleStats(sender, args, config);
+            return true;
+        }
+        if (sub.equals("audit")) {
+            handleAudit(sender, args, config);
             return true;
         }
         sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
@@ -208,6 +237,7 @@ public final class TimedItemCommand implements CommandExecutor {
         }
         String pretty = TimeLore.formatDuration(seconds, config);
         player.sendMessage(config.getPrefix() + config.getTimeSet().replace("{time}", pretty));
+        audit(player, AuditRecord.SET, player.getName(), item, pretty, config);
     }
 
     private void handleAdd(CommandSender sender, String[] args, PluginConfig config) {
@@ -244,6 +274,8 @@ public final class TimedItemCommand implements CommandExecutor {
             TimeLore.applyExpiry(item, config, newRemaining);
             player.sendMessage(config.getPrefix() + config.getTimeAdded()
                     .replace("{time}", TimeLore.formatDuration(newRemaining, config)));
+            audit(player, AuditRecord.ADD, player.getName(), item,
+                    "+" + TimeLore.formatDuration(delta, config), config);
         } else if (type == TimeLore.Type.LIFETIME) {
             long seconds = TimeLore.lifetimeSeconds(item, config);
             if (seconds <= 0) {
@@ -254,6 +286,8 @@ public final class TimedItemCommand implements CommandExecutor {
             TimeLore.applyLifetime(item, config, newSeconds);
             player.sendMessage(config.getPrefix() + config.getTimeAdded()
                     .replace("{time}", TimeLore.formatDuration(newSeconds, config)));
+            audit(player, AuditRecord.ADD, player.getName(), item,
+                    "+" + TimeLore.formatDuration(delta, config), config);
         } else if (type == TimeLore.Type.PAUSED) {
             long seconds = TimeLore.pausedSeconds(item, config);
             if (seconds <= 0) {
@@ -264,6 +298,8 @@ public final class TimedItemCommand implements CommandExecutor {
             TimeLore.applyPaused(item, config, newSeconds);
             player.sendMessage(config.getPrefix() + config.getTimeAdded()
                     .replace("{time}", TimeLore.formatDuration(newSeconds, config)));
+            audit(player, AuditRecord.ADD, player.getName(), item,
+                    "+" + TimeLore.formatDuration(delta, config), config);
         } else {
             player.sendMessage(config.getPrefix() + config.getNoTimer());
         }
@@ -345,6 +381,7 @@ public final class TimedItemCommand implements CommandExecutor {
             target.sendMessage(config.getPrefix() + config.getGiveReceived()
                     .replace("{time}", pretty));
         }
+        audit(player, AuditRecord.GIVE, target.getName(), gift, pretty, config);
     }
 
     /**
@@ -405,6 +442,7 @@ public final class TimedItemCommand implements CommandExecutor {
             target.sendMessage(config.getPrefix() + config.getGiveReceived()
                     .replace("{time}", pretty));
         }
+        audit(sender, AuditRecord.GIVE, target.getName(), built, token + " " + pretty, config);
     }
 
     private void handlePause(Player player, ItemStack item, PluginConfig config) {
@@ -430,6 +468,8 @@ public final class TimedItemCommand implements CommandExecutor {
         TimeLore.applyPaused(item, config, remaining);
         player.sendMessage(config.getPrefix() + config.getTimerPaused()
                 .replace("{time}", TimeLore.formatDuration(remaining, config)));
+        audit(player, AuditRecord.PAUSE, player.getName(), item,
+                TimeLore.formatDuration(remaining, config), config);
     }
 
     private void handleResume(Player player, ItemStack item, PluginConfig config) {
@@ -450,6 +490,8 @@ public final class TimedItemCommand implements CommandExecutor {
         TimeLore.applyExpiry(item, config, seconds);
         player.sendMessage(config.getPrefix() + config.getTimerResumed()
                 .replace("{time}", TimeLore.formatDuration(seconds, config)));
+        audit(player, AuditRecord.RESUME, player.getName(), item,
+                TimeLore.formatDuration(seconds, config), config);
     }
 
     private void handleInfo(CommandSender sender, PluginConfig config) {
@@ -519,5 +561,184 @@ public final class TimedItemCommand implements CommandExecutor {
             return null;
         }
         return item;
+    }
+
+    /**
+     * Records one audit entry through the storage writer (async, never
+     * blocks the command or a region thread).
+     */
+    private void audit(CommandSender actor, String action, String target, ItemStack item,
+                       String details, PluginConfig config) {
+        String actorName = actor instanceof Player ? ((Player) actor).getName() : "console";
+        String actorUuid = actor instanceof Player
+                ? ((Player) actor).getUniqueId().toString() : null;
+        String itemUid = item == null ? null : PdcCompat.readUid(item);
+        String itemId;
+        if (item == null) {
+            itemId = null;
+        } else {
+            String custom = plugin.hooks().itemId(item);
+            itemId = custom != null ? custom : item.getType().name();
+        }
+        plugin.storage().appendAudit(new AuditRecord(System.currentTimeMillis(), actorUuid,
+                actorName, action, target, itemUid, itemId, details));
+    }
+
+    /**
+     * /ti find <material|plugin:id|name> - locates timed items in online
+     * player inventories; on classic servers also on the ground, in item
+     * frames, on armor stands and in every loaded container. On Folia
+     * only the per-player search is possible (cross-region reads are not
+     * safe), so there it dispatches onto each player's region and
+     * collects the results on an async thread.
+     */
+    private void handleFind(CommandSender sender, String[] args, PluginConfig config) {
+        if (args.length < 2) {
+            sender.sendMessage(config.getPrefix() + config.getFindUsage());
+            return;
+        }
+        final Predicate<ItemStack> matcher = ItemFinder.compile(plugin, args[1]);
+        if (matcher == null) {
+            sender.sendMessage(config.getPrefix() + config.getFindUsage());
+            return;
+        }
+        final String query = args[1];
+        if (SchedulerCompat.isFolia()) {
+            final List<Player> online = new ArrayList<Player>(Bukkit.getOnlinePlayers());
+            final List<String> hits = Collections.synchronizedList(new ArrayList<String>());
+            final CountDownLatch done = new CountDownLatch(online.size());
+            for (final Player player : online) {
+                SchedulerCompat.runAtPlayer(plugin, player, () -> {
+                    try {
+                        if (player.isOnline()) {
+                            hits.addAll(ItemFinder.findInPlayer(plugin, player, matcher));
+                        }
+                    } finally {
+                        done.countDown();
+                    }
+                });
+            }
+            SchedulerCompat.runAsync(plugin, () -> {
+                try {
+                    done.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                sendFindResult(sender, config, query, hits);
+            });
+            return;
+        }
+        List<String> hits = new ArrayList<String>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            hits.addAll(ItemFinder.findInPlayer(plugin, player, matcher));
+        }
+        if (hits.size() < ItemFinder.MAX_HITS) {
+            hits.addAll(ItemFinder.findInWorlds(plugin, matcher));
+        }
+        sendFindResult(sender, config, query, hits);
+    }
+
+    private void sendFindResult(CommandSender sender, PluginConfig config, String query,
+                                List<String> hits) {
+        if (hits.isEmpty()) {
+            sender.sendMessage(config.getPrefix()
+                    + config.getFindNoMatch().replace("{query}", query));
+            return;
+        }
+        sender.sendMessage(config.getPrefix() + config.getFindResult()
+                .replace("{count}", String.valueOf(hits.size()))
+                .replace("{query}", query));
+        int shown = Math.min(hits.size(), ItemFinder.MAX_HITS);
+        for (int i = 0; i < shown; i++) {
+            sender.sendMessage(hits.get(i));
+        }
+        if (hits.size() > shown) {
+            sender.sendMessage(config.getPrefix() + config.getFindTruncated()
+                    .replace("{rest}", String.valueOf(hits.size() - shown))
+                    .replace("{shown}", String.valueOf(shown)));
+        }
+    }
+
+    /** /ti stats [days] - daily expiry statistics from the storage backend (async query). */
+    private void handleStats(CommandSender sender, String[] args, PluginConfig config) {
+        int days = 7;
+        if (args.length >= 2) {
+            try {
+                days = Math.max(1, Math.min(90, Integer.parseInt(args[1])));
+            } catch (NumberFormatException e) {
+                sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
+                return;
+            }
+        }
+        final int window = days;
+        final String sinceDay = new SimpleDateFormat("yyyy-MM-dd").format(
+                new Date(System.currentTimeMillis() - (days - 1L) * 86400000L));
+        SchedulerCompat.runAsync(plugin, () -> {
+            Map<String, Map<String, Long>> perDay = plugin.storage().expiredStats(sinceDay);
+            Map<String, Long> totals = new HashMap<String, Long>();
+            long total = 0;
+            for (Map<String, Long> materials : perDay.values()) {
+                for (Map.Entry<String, Long> entry : materials.entrySet()) {
+                    Long existing = totals.get(entry.getKey());
+                    long value = entry.getValue() == null ? 0L : entry.getValue();
+                    totals.put(entry.getKey(), (existing == null ? 0L : existing) + value);
+                    total += value;
+                }
+            }
+            if (totals.isEmpty()) {
+                sender.sendMessage(config.getPrefix()
+                        + config.getStatsEmpty().replace("{days}", String.valueOf(window)));
+                return;
+            }
+            sender.sendMessage(config.getPrefix() + config.getStatsHeader()
+                    .replace("{days}", String.valueOf(window)));
+            List<Map.Entry<String, Long>> top = new ArrayList<Map.Entry<String, Long>>(totals.entrySet());
+            Collections.sort(top, new Comparator<Map.Entry<String, Long>>() {
+                @Override
+                public int compare(Map.Entry<String, Long> a, Map.Entry<String, Long> b) {
+                    return Long.compare(b.getValue(), a.getValue());
+                }
+            });
+            for (int i = 0; i < top.size() && i < STATS_TOP; i++) {
+                sender.sendMessage(config.getPrefix() + config.getStatsLine()
+                        .replace("{material}", top.get(i).getKey())
+                        .replace("{count}", String.valueOf(top.get(i).getValue())));
+            }
+            sender.sendMessage(config.getPrefix() + config.getStatsTotal()
+                    .replace("{count}", String.valueOf(total)));
+        });
+    }
+
+    /** /ti audit [page] - recent timer actions from the audit log (async query). */
+    private void handleAudit(CommandSender sender, String[] args, PluginConfig config) {
+        int page = 0;
+        if (args.length >= 2) {
+            try {
+                page = Math.max(0, Integer.parseInt(args[1]) - 1);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
+                return;
+            }
+        }
+        final int pageIndex = page;
+        SchedulerCompat.runAsync(plugin, () -> {
+            List<AuditRecord> entries = plugin.storage().auditPage(AUDIT_PAGE_SIZE, pageIndex);
+            if (entries.isEmpty()) {
+                sender.sendMessage(config.getPrefix() + config.getAuditEmpty());
+                return;
+            }
+            sender.sendMessage(config.getPrefix() + config.getAuditHeader()
+                    .replace("{page}", String.valueOf(pageIndex + 1)));
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+            for (AuditRecord entry : entries) {
+                sender.sendMessage(config.getPrefix() + config.getAuditLine()
+                        .replace("{date}", format.format(new Date(entry.getTimeMillis())))
+                        .replace("{actor}", entry.getActorName() == null ? "?" : entry.getActorName())
+                        .replace("{action}", entry.getAction() == null ? "?" : entry.getAction())
+                        .replace("{target}", entry.getTarget() == null ? "-" : entry.getTarget())
+                        .replace("{item}", entry.getItemId() == null ? "-" : entry.getItemId())
+                        .replace("{details}", entry.getDetails() == null ? "" : entry.getDetails()));
+            }
+        });
     }
 }

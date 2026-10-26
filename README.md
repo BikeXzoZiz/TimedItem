@@ -50,13 +50,15 @@
 | 💬 | **Discord webhook ในตัว** | แจ้ง Discord ทุกครั้งที่ไอเทมหมดอายุ ไม่ต้องติดตั้งปลั๊กอินอื่น |
 | 🌐 | **หลายภาษา** | อังกฤษ / ไทย พร้อมใช้ หรือวางไฟล์ภาษาของคุณเอง — GUI ก็เปลี่ยนตาม |
 | 🧩 | **Integration 9 ปลั๊กอิน** | MMOItems · ItemsAdder · Oraxen · Nexo · ExecutableItems · Slimefun · EcoItems · Shopkeepers · CrazyCrates — สร้างของ custom เป็น timed item ได้โดยตรง (ตั้งแต่ 2.6.0) |
+| 🗄️ | **ฐานข้อมูลหลายตัว** | เลือกที่เก็บ recovery / audit / สถิติได้: ไฟล์ (default) · SQLite · MySQL/MariaDB · MongoDB (ตั้งแต่ 2.7.0) |
+| 🔍 | **เครื่องมือแอดมิน** | `/ti find` ค้นหาไอเทมจับเวลาทั้งเซิร์ฟ · `/ti stats` สถิติการหมดอายุ · `/ti audit` ประวัติการกระทำทั้งหมด (ตั้งแต่ 2.7.0) |
 | 🍃 | **รองรับ Folia** | ทำงานถูกต้องบน threading แบบ region (ตั้งแต่ 2.4.0) |
 | 🔌 | **Developer API** | Events, Facade, PlaceholderAPI — ผสานกับปลั๊กอินของคุณได้ทันที |
 | ♻️ | **กู้คืนได้** | ทุกไอเทมที่หมดอายุถูกบันทึกไว้ แอดมินคืนให้ผู้เล่นได้ด้วยคลิกเดียว |
 
 ## 🚀 เริ่มใช้ใน 1 นาที
 
-1. ดาวน์โหลด `TimedItem-2.6.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
+1. ดาวน์โหลด `TimedItem-2.7.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
 2. รีสตาร์ทเซิร์ฟเวอร์ — เสร็จ! (ค่า default ใช้ได้ทันที)
 3. ลองเลย:
 
@@ -104,6 +106,9 @@ Permission ทั้งหมด: `timeditem.admin` (default: op) — ทุก�
 | `/ti info` | ดูเวลาที่เหลือ / lifetime / เวลาที่หยุดไว้ |
 | `/ti menu` | เปิด GUI — preset เวลา / pause-resume / remove / สถานะสด |
 | `/ti restore [หน้า]` | เปิด GUI กู้คืนไอเทมที่หมดอายุไปแล้วล่าสุด — คลิกเพื่อรับคืน |
+| `/ti find <material\|plugin:id\|ชื่อ>` | ค้นหาไอเทมจับเวลาทั้งเซิร์ฟ — ในตัวผู้เล่น, ตู้เก็บของที่โหลดอยู่, บนพื้น, ใน item frame และ armor stand พร้อมพิกัด (บน Folia ค้นเฉพาะผู้เล่นออนไลน์) |
+| `/ti stats [วัน]` | สถิติไอเทมที่หมดอายุ แยกตามชนิด (default 7 วันล่าสุด, สูงสุด 90) |
+| `/ti audit [หน้า]` | ประวัติการกระทำที่ผ่าน `/ti` ทั้งหมด (set/add/pause/resume/remove/give/restore) พร้อมผู้กระทำ, เป้าหมาย และไอเทม |
 | `/ti debug [on\|off\|export]` | เครื่องมือไล่บั๊ก — ดูสถานะ, เปิด/ปิด verbose logging ของ session, หรือเขียนรายงานบั๊กเป็นไฟล์ `plugins/TimedItem/debug/` (ตั้ง default ที่ `Settings.debug`) |
 | `/ti reload` | โหลด config + ไฟล์ภาษาใหม่ (task เริ่มใหม่ตาม config) |
 
@@ -393,9 +398,15 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 ## 💾 การจัดเก็บข้อมูล
 
-- **1.14+**: เก็บใน **PersistentDataContainer (NBT ของไอเทม)** เป็นตัวจริง — เป็น epoch millis จึงไม่กระทบ timezone
+- **1.14+**: เก็บใน **PersistentDataContainer (NBT ของไอเทม)** เป็นตัวจริง — เป็น epoch millis จึงไม่กระทบ timezone; ตั้งแต่ 2.7.0 ไอเทมจับเวลาทุกชิ้นได้ **uid (UUID)** ฝังใน NBT ด้วย ใช้ติดตามไอเทมใน audit log และ `/ti find`
 - **lore** ถูกเขียนพร้อมกันเสมอเพื่อแสดงผล และเป็นที่เก็บจริงบนเซิร์ฟ 1.13 / ไอเทมเก่า (v1/v2.0 ใช้ต่อได้ทันที — ครั้งถัดไปที่แก้ไขจะย้ายเข้า PDC เอง)
-- **recovery.log** — ทุกไอเทมที่หมดอายุถูกบันทึกที่ `plugins/TimedItem/recovery.log` (เขียนบน background thread, snapshot + atomic move) เปิดด้วย `/ti restore` เพื่อคืนของแบบคลิกเดียว; ไฟล์ migrate เป็นฟอร์แมตของเซิร์ฟเวอร์ปัจจุบันเองตอนโหลด จึงย้ายเวอร์ชัน MC ได้
+- **ที่เก็บข้อมูลปลั๊กอิน** (recovery / audit / สถิติ) เลือกได้ที่ `Settings.storage.type` — เปลี่ยนแล้วต้องรีสตาร์ท:
+  - `flat` (default) — ไฟล์ใน `plugins/TimedItem/`: `recovery.log` · `audit.log` · `stats.yml` (เขียนบน background thread, snapshot + atomic move)
+  - `sqlite` — ไฟล์เดียว `database.db` ไม่ต้องติดตั้งอะไรเพิ่ม
+  - `mysql` — MariaDB/MySQL ผ่าน connection pool (HikariCP) เหมาะกับ network หลายเซิร์ฟแชร์ฐานข้อมูลเดียว
+  - `mongodb` — ต่อด้วย connection string มาตรฐาน
+  - บูตครั้งแรกด้วยฐานข้อมูล จะ import `recovery.log` เดิมเข้าฐานข้อมูลให้เอง (ไฟล์เดิมเปลี่ยนชื่อเป็น `recovery.log.imported` — ข้อมูลไม่หาย); ต่อ DB ไม่สำเร็จ = กลับไปใช้ไฟล์อัตโนมัติพร้อม warn
+- **กู้คืนได้** — ทุกไอเทมที่หมดอายุถูกบันทึกไว้ก่อนลบ เปิดด้วย `/ti restore` เพื่อคืนแบบคลิกเดียว; ข้อมูล migrate เป็นฟอร์แมตของเซิร์ฟเวอร์ปัจจุบันเองตอนโหลด จึงย้ายเวอร์ชัน MC ได้
 
 ## 🍃 Folia & ความเข้ากันได้
 

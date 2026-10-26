@@ -36,6 +36,20 @@ Messages:
   debug_export_failed: "&cเขียนรายงาน debug ไม่สำเร็จ: &7{error}"
   debug_usage: "&7วิธีใช้: /ti debug [on|off|export]"
   item_not_found: "&cไม่พบ custom item: &e{id}&c ใช้รูปแบบ <plugin>:<ไอดี> เช่น mmoitems:SWORD:CUTLASS"
+  find_usage: "&7วิธีใช้: /ti find <material|plugin:id|ชื่อ>"
+  find_no_match: "&7ไม่พบไอเทมจับเวลาที่ตรงกับ &e{query}"
+  find_result: "&aพบไอเทมจับเวลา &e{count} &aชิ้นที่ตรงกับ &e{query}&a:"
+  find_truncated: "&7...และอีก &e{rest} &7รายการ (แสดง {shown} รายการแรก)"
+  find_hit_player: " &8- &e{player} &7(ช่อง {slot})"
+  find_hit_container: " &8- &7{world} &e{x},{y},{z} &7({type})"
+  find_hit_ground: " &8- &7{world} &e{x},{y},{z}"
+  stats_header: "&6ไอเทมที่หมดอายุ ({days} วันล่าสุด):"
+  stats_line: " &e{material}&7: &a{count}"
+  stats_total: "&7หมดอายุทั้งหมด: &e{count}"
+  stats_empty: "&7ไม่มีไอเทมหมดอายุใน {days} วันล่าสุด"
+  audit_header: "&6บันทึกการกระทำ (หน้า {page}):"
+  audit_line: " &8[{date}] &e{actor} &7{action} &7ผู้ถูกกระทำ=&f{target} &7ไอเทม=&f{item} &7{details}"
+  audit_empty: "&7ยังไม่มีประวัติการกระทำ"
 
 DateFormat:
   # Prefix ที่เขียนลง lore ของไอเทม — ห้ามแก้หลังมีไอเทมที่มี timer อยู่แล้ว

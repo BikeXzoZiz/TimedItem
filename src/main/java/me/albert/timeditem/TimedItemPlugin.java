@@ -3,6 +3,8 @@ package me.albert.timeditem;
 import me.albert.timeditem.api.TimedItemAPI;
 import me.albert.timeditem.hook.HookManager;
 import me.albert.timeditem.hook.TimedItemExpansion;
+import me.albert.timeditem.storage.StorageWriter;
+import me.albert.timeditem.storage.StorageFactory;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -23,6 +25,7 @@ public final class TimedItemPlugin extends JavaPlugin {
     private DiscordWebhook discordWebhook;
     private FoliaGroundExpiry foliaGroundExpiry;
     private HookManager hooks;
+    private StorageWriter storageWriter;
     private SchedulerCompat.Handle expiryTask;
     private SchedulerCompat.Handle actionbarTask;
 
@@ -33,11 +36,14 @@ public final class TimedItemPlugin extends JavaPlugin {
         config.load();
         DebugLog.install(getLogger());
         DebugLog.setEnabled(config.isDebugEnabled());
+        // storage is created once and never re-created by /ti reload -
+        // changing Settings.storage.type needs a restart by design
+        storageWriter = new StorageWriter(StorageFactory.create(this), getLogger());
         listener = new ExpiryListener(this);
         Bukkit.getPluginManager().registerEvents(listener, this);
         menu = new TimedItemMenu(this);
         Bukkit.getPluginManager().registerEvents(menu, this);
-        recoveryStore = new RecoveryStore(this);
+        recoveryStore = new RecoveryStore(this, storageWriter);
         recoveryStore.load();
         expiryService = new ExpiryService(this);
         // created before the tasks start: on Folia a region thread can
@@ -106,6 +112,11 @@ public final class TimedItemPlugin extends JavaPlugin {
         return restoreMenu;
     }
 
+    /** Async persistence behind recovery, audit and stats. */
+    public StorageWriter storage() {
+        return storageWriter;
+    }
+
     /** Integrations with other item plugins (Hooks.* config section). */
     public HookManager hooks() {
         return hooks;
@@ -117,7 +128,9 @@ public final class TimedItemPlugin extends JavaPlugin {
         expiryTask = null;
         cancelTask(actionbarTask);
         actionbarTask = null;
-        recoveryStore.close();
+        if (storageWriter != null) {
+            storageWriter.close();
+        }
         if (discordWebhook != null) {
             discordWebhook.close();
         }

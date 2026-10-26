@@ -1,9 +1,9 @@
-# TimedItem 2.5.0
+# TimedItem 2.7.0
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 # Messages live in lang/messages_<language>.yml (see Settings.language).
 
-config-version: 7
+config-version: 9
 
 Settings:
   # Language file to load messages from: lang/messages_en.yml,
@@ -64,6 +64,10 @@ Settings:
     # Ground/frame expiry has no player: commands containing {player} are
     # skipped, the rest still run.
     []
+  # Administrative lookups (no player-facing effect):
+  # /ti find <material|plugin:id|name> locates timed items in inventories,
+  # containers and on the ground; /ti stats [days] shows expiry counts;
+  # /ti audit [page] lists recent timer actions.
   sound:
     # Played at the player when an item expires. The name is a sound key
     # which works on every 1.13+ server:
@@ -84,13 +88,39 @@ Settings:
     # GitHub repository as owner/name used for the release check.
     repository: "BikeXzoZiz/TimedItem"
   recovery:
-    # Save every expired item to plugins/TimedItem/recovery.log so admins
-    # can hand it back with /ti restore.
+    # Save every expired item so admins can hand it back with /ti restore.
     enabled: true
     # Maximum entries kept in the log (oldest dropped first).
     max_items: 500
     # Entries older than this many days are pruned on startup.
     keep_days: 7
+  storage:
+    # Where recovery entries, the audit log and the expiry statistics
+    # live: "flat" (plugins/TimedItem/ files, default), "sqlite",
+    # "mysql" (MariaDB/MySQL, for networks sharing one database) or
+    # "mongodb". Changing this needs a restart; the first start with a
+    # database imports the existing recovery.log automatically
+    # (recovery.log -> recovery.log.imported).
+    type: "flat"
+    mysql:
+      host: "localhost"
+      port: 3306
+      database: "timeditem"
+      user: "timeditem"
+      password: ""
+      use_ssl: false
+      pool_size: 4
+    sqlite:
+      # File name inside plugins/TimedItem/.
+      file: "database.db"
+    mongodb:
+      # Standard MongoDB connection string; the database in the URI is
+      # used unless mongodb.database overrides it.
+      uri: "mongodb://localhost:27017"
+      database: "timeditem"
+    # Maximum audit entries kept (/ti audit; timer actions like
+    # set/add/pause/give/restore).
+    audit_history: 5000
   discord_webhook:
     # Post a message to a Discord channel whenever an item expires
     # (players and ground items). Create the webhook in Discord:

@@ -23,6 +23,15 @@ public final class ExpiryService {
     /** Radius in which a player sees and hears a ground expiry. */
     private static final double GROUND_EFFECT_RADIUS = 20.0;
 
+    /** yyyy-MM-dd key for the daily expiry statistics (thread safe). */
+    private static final ThreadLocal<java.text.SimpleDateFormat> DAY_FORMAT =
+            new ThreadLocal<java.text.SimpleDateFormat>() {
+                @Override
+                protected java.text.SimpleDateFormat initialValue() {
+                    return new java.text.SimpleDateFormat("yyyy-MM-dd");
+                }
+            };
+
     private final TimedItemPlugin plugin;
 
     public ExpiryService(TimedItemPlugin plugin) {
@@ -79,6 +88,8 @@ public final class ExpiryService {
         }
         runExpiryCommands(player, config);
         plugin.discordWebhook().notifyExpiry(item, player, world, config);
+        plugin.storage().incrementExpired(DAY_FORMAT.get().format(new java.util.Date()),
+                item.getType().name());
         return true;
     }
 

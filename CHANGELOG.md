@@ -2,6 +2,30 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [2.7.0] - 2026-10-26
+
+### Added
+- **ระบบฐานข้อมูลหลายตัว** (`Settings.storage.type` — เลือกได้ 4 แบบ, เปลี่ยนแล้วรีสตาร์ท):
+  - **`flat`** (default) — ไฟล์ใน `plugins/TimedItem/` เหมือนเดิมทุกอย่าง
+  - **`sqlite`** — ไฟล์เดียว `database.db` ไม่ต้องติดตั้งเซิร์ฟเวอร์
+  - **`mysql`** — MariaDB/MySQL ผ่าน connection pool (HikariCP) สำหรับ network หลายเซิร์ฟ
+  - **`mongodb`** — ต่อด้วย connection string มาตรฐาน
+  - ทุก backend รองรับข้อมูล 3 กลุ่ม: **recovery** (กู้คืนไอเทม), **audit log**, **สถิติการหมดอายุรายวัน**
+  - บูตครั้งแรกด้วยฐานข้อมูล = import `recovery.log` เดิมอัตโนมัติ (ไฟล์เดิมกลายเป็น `recovery.log.imported`); ต่อ DB ไม่ได้ = fallback กลับเป็นไฟล์พร้อม warn — ปลั๊กอินไม่มีวาย
+- **Item UID** — ไอเทมจับเวลาทุกชิ้น (1.14+) ได้ UUID ฝังใน NBT ตอนตั้งเวลา ใช้ติดตามใน audit และการค้นหา; entry ใน recovery เก็บ **UUID ผู้เล่น** ด้วย (เดิมเก็บแต่ชื่อ) เตรียมระบบ restore ข้ามเซิร์ฟ
+- **`/ti find <material|plugin:id|ชื่อ>`** — ค้นหาไอเทมจับเวลาทั้งเซิร์ฟ: ในตัวผู้เล่นออนไลน์, ตู้เก็บของที่โหลดอยู่ (chest/barrel/shulker/เตา ฯลฯ), บนพื้น, ใน item frame, บน armor stand — รายงานพร้อมพิกัด (บน Folia ค้นเฉพาะผู้เล่นออนไลน์เพราะข้อจำกัด threading)
+- **`/ti stats [วัน]`** — สถิติไอเทมที่หมดอายุแยกตามชนิด (นับจากทุก context: ผู้เล่น/พื้น/เฟรม)
+- **`/ti audit [หน้า]`** — ประวัติการกระทำที่ผ่าน `/ti` ทั้งหมด (set / add / pause / resume / remove / give / restore) พร้อมผู้กระทำ (console รวม), เป้าหมาย, uid ของไอเทม และรายละเอียด — เก็บสูงสุด `Settings.storage.audit_history` รายการ (default 5000)
+- Tab completion ใหม่สำหรับ find/stats/audit; รายงาน `/ti debug export` แสดง storage backend ที่ใช้อยู่
+
+### Technical
+- **ชั้นเก็บข้อมูลใหม่** `me.albert.timeditem.storage`: interface `Storage` + `StorageWriter` (single background writer thread — ทุกการเขียนเป็น fire-and-forget ปลอดภัยกับ region thread ของ Folia); 4 backends: `FlatFileStorage` (คงพฤติกรรม 2.6 ทุกด้าน), `SqliteStorage` / `MySqlStorage` (แชร์ฐาน `SqlStorage` + ตาราง `timeditem_recovery` / `timeditem_audit` / `timeditem_stats`), `MongoStorage` (collections เดียวกัน)
+- **`recovery.log` ฟอร์แมต v3** — เพิ่ม id (UUID) และ player UUID ขึ้นหน้าบรรทัด; บรรทัด v1/v2 เก่าโหลดต่อได้ (ได้ id สร้างใหม่อัตโนมัติ); ทั้ง flat และ DB re-encode ข้อมูลเป็นฟอร์แมตเซิร์ฟปัจจุบันเองตอนโหลดเหมือนเดิม
+- Dependencies ใหม่ทั้งหมด **shade + relocate** คงสัญญา jar เดียว Java 8 bytecode: HikariCP 4.0.3, sqlite-jdbc, mariadb-java-client (Apache 2.0, พูดโปรโตคอล MySQL), mongodb-driver-sync 4.11 — ขนาด jar โตจาก ~0.2MB เป็น ~17MB จาก driver ฐานข้อมูล
+- ปักหมุด `slf4j-api` 2.0.13 + `slf4j-nop` (HikariCP ดึง slf4j 2.0.0-alpha1 มาให้ — แก้ให้ console สะอาด ไม่มี SLF4J warning)
+- `/ti reload` **ไม่** เปลี่ยน storage backend (ต้องรีสตาร์ทโดยการออกแบบ — กันข้อมูลครึ่งไฟล์ครึ่ง DB)
+- Unit tests ใหม่: `RecoveryFormatTest` (ฟอร์แมต v3 + ย้อนหลัง v1/v2), `FlatFileStorageTest` (recovery/audit/stats ครบ + escape อักขระพิเศษ), `SqliteStorageTest` (รัน SQLite จริง — คลอบ path SQL เดียวกับ MySQL รวม dialect upsert)
+
 ## [2.6.0] - 2026-10-26
 
 ### Added

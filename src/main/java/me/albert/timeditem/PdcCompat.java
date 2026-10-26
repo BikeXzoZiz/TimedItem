@@ -12,10 +12,13 @@ import java.lang.reflect.Method;
  * (the compile target is 1.13, where the API does not exist yet). On
  * 1.13 every method silently no-ops and TimeLore falls back to lore.
  *
- * Stores two keys on the item: "type" (expire|lifetime|paused) and
- * "value" (epoch millis for expire, seconds otherwise). All Methods are
- * resolved once in init - this is the hottest path in the plugin (every
- * click, scan and actionbar tick), so per-call lookups are out.
+ * Stores three keys on the item: "type" (expire|lifetime|paused),
+ * "value" (epoch millis for expire, seconds otherwise) and "uid" (a
+ * random UUID assigned with the first timer write, so audit entries,
+ * /ti find and cross-server tracking can name an individual item). All
+ * methods are resolved once in init - this is the hottest path in the
+ * plugin (every click, scan and actionbar tick), so per-call lookups
+ * are out.
  */
 public final class PdcCompat {
 
@@ -23,6 +26,7 @@ public final class PdcCompat {
     private static volatile boolean available;
     private static NamespacedKey typeKey;
     private static NamespacedKey valueKey;
+    private static NamespacedKey uidKey;
     private static Object stringType;
     private static Object longType;
     private static volatile Method getPdcMethod;
@@ -44,6 +48,7 @@ public final class PdcCompat {
             longType = dataTypeClass.getField("LONG").get(null);
             typeKey = new NamespacedKey(plugin, "type");
             valueKey = new NamespacedKey(plugin, "value");
+            uidKey = new NamespacedKey(plugin, "uid");
             getPdcMethod = ItemMeta.class.getMethod("getPersistentDataContainer");
             Class<?> containerClass = Class.forName("org.bukkit.persistence.PersistentDataContainer");
             setMethod = containerClass.getMethod("set", NamespacedKey.class, dataTypeClass, Object.class);
@@ -71,6 +76,9 @@ public final class PdcCompat {
             Object container = getPdcMethod.invoke(meta);
             setMethod.invoke(container, typeKey, stringType, type);
             setMethod.invoke(container, valueKey, longType, value);
+            if (getMethod.invoke(container, uidKey, stringType) == null) {
+                setMethod.invoke(container, uidKey, stringType, java.util.UUID.randomUUID().toString());
+            }
             item.setItemMeta(meta);
         } catch (Throwable ignored) {
             DebugLog.verbose("PDC write failed (lore stays the storage of record): " + ignored);
@@ -103,6 +111,24 @@ public final class PdcCompat {
         }
     }
 
+    /** The item's TimedItem uid, or null when it has none (1.13 or lore-only items). */
+    public static String readUid(ItemStack item) {
+        if (!available) {
+            return null;
+        }
+        try {
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) {
+                return null;
+            }
+            Object container = getPdcMethod.invoke(meta);
+            return (String) getMethod.invoke(container, uidKey, stringType);
+        } catch (Throwable t) {
+            DebugLog.verbose("PDC uid read failed: " + t);
+            return null;
+        }
+    }
+
     public static void clear(ItemStack item) {
         if (!available) {
             return;
@@ -115,6 +141,7 @@ public final class PdcCompat {
             Object container = getPdcMethod.invoke(meta);
             removeMethod.invoke(container, typeKey);
             removeMethod.invoke(container, valueKey);
+            removeMethod.invoke(container, uidKey);
             item.setItemMeta(meta);
         } catch (Throwable ignored) {
             DebugLog.verbose("PDC clear failed: " + ignored);

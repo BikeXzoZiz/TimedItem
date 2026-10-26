@@ -55,6 +55,20 @@ public final class PluginConfig {
     private String debugExportFailed;
     private String debugUsage;
     private String itemNotFound;
+    private String findUsage;
+    private String findNoMatch;
+    private String findResult;
+    private String findTruncated;
+    private String findHitPlayer;
+    private String findHitContainer;
+    private String findHitGround;
+    private String statsHeader;
+    private String statsLine;
+    private String statsTotal;
+    private String statsEmpty;
+    private String auditHeader;
+    private String auditLine;
+    private String auditEmpty;
 
     private String expiresAtPrefix;
     private String usefulLifePrefix;
@@ -94,6 +108,18 @@ public final class PluginConfig {
     private boolean recoveryEnabled;
     private int recoveryMaxItems;
     private int recoveryKeepDays;
+    private String storageType;
+    private String mysqlHost;
+    private int mysqlPort;
+    private String mysqlDatabase;
+    private String mysqlUser;
+    private String mysqlPassword;
+    private boolean mysqlUseSsl;
+    private int mysqlPoolSize;
+    private String sqliteFile;
+    private String mongodbUri;
+    private String mongodbDatabase;
+    private int auditHistory;
     private boolean discordWebhookEnabled;
     private String discordWebhookUrl;
     private String discordWebhookUsername;
@@ -174,6 +200,18 @@ public final class PluginConfig {
         raw.addDefault("Settings.recovery.enabled", true);
         raw.addDefault("Settings.recovery.max_items", 500);
         raw.addDefault("Settings.recovery.keep_days", 7);
+        raw.addDefault("Settings.storage.type", "flat");
+        raw.addDefault("Settings.storage.mysql.host", "localhost");
+        raw.addDefault("Settings.storage.mysql.port", 3306);
+        raw.addDefault("Settings.storage.mysql.database", "timeditem");
+        raw.addDefault("Settings.storage.mysql.user", "timeditem");
+        raw.addDefault("Settings.storage.mysql.password", "");
+        raw.addDefault("Settings.storage.mysql.use_ssl", false);
+        raw.addDefault("Settings.storage.mysql.pool_size", 4);
+        raw.addDefault("Settings.storage.sqlite.file", "database.db");
+        raw.addDefault("Settings.storage.mongodb.uri", "mongodb://localhost:27017");
+        raw.addDefault("Settings.storage.mongodb.database", "timeditem");
+        raw.addDefault("Settings.storage.audit_history", 5000);
         raw.addDefault("Settings.blacklist.materials", new java.util.ArrayList<String>());
         raw.addDefault("Hooks.mmoitems", true);
         raw.addDefault("Hooks.itemsadder", true);
@@ -241,6 +279,20 @@ public final class PluginConfig {
         recoveryEnabled = raw.getBoolean("Settings.recovery.enabled", true);
         recoveryMaxItems = Math.max(1, raw.getInt("Settings.recovery.max_items", 500));
         recoveryKeepDays = Math.max(1, raw.getInt("Settings.recovery.keep_days", 7));
+
+        String type = raw.getString("Settings.storage.type", "flat");
+        storageType = type == null ? "flat" : type.trim().toLowerCase(Locale.ROOT);
+        mysqlHost = raw.getString("Settings.storage.mysql.host", "localhost");
+        mysqlPort = raw.getInt("Settings.storage.mysql.port", 3306);
+        mysqlDatabase = raw.getString("Settings.storage.mysql.database", "timeditem");
+        mysqlUser = raw.getString("Settings.storage.mysql.user", "timeditem");
+        mysqlPassword = raw.getString("Settings.storage.mysql.password", "");
+        mysqlUseSsl = raw.getBoolean("Settings.storage.mysql.use_ssl", false);
+        mysqlPoolSize = Math.max(1, raw.getInt("Settings.storage.mysql.pool_size", 4));
+        sqliteFile = raw.getString("Settings.storage.sqlite.file", "database.db");
+        mongodbUri = raw.getString("Settings.storage.mongodb.uri", "mongodb://localhost:27017");
+        mongodbDatabase = raw.getString("Settings.storage.mongodb.database", "timeditem");
+        auditHistory = Math.max(100, raw.getInt("Settings.storage.audit_history", 5000));
         Set<Material> blacklisted = new HashSet<Material>();
         for (String name : raw.getStringList("Settings.blacklist.materials")) {
             Material material = Material.matchMaterial(name);
@@ -322,6 +374,21 @@ public final class PluginConfig {
         debugExportFailed = color(lang.getString("Messages.debug_export_failed"));
         debugUsage = color(lang.getString("Messages.debug_usage"));
         itemNotFound = color(lang.getString("Messages.item_not_found"));
+
+        findUsage = color(lang.getString("Messages.find_usage"));
+        findNoMatch = color(lang.getString("Messages.find_no_match"));
+        findResult = color(lang.getString("Messages.find_result"));
+        findTruncated = color(lang.getString("Messages.find_truncated"));
+        findHitPlayer = color(lang.getString("Messages.find_hit_player"));
+        findHitContainer = color(lang.getString("Messages.find_hit_container"));
+        findHitGround = color(lang.getString("Messages.find_hit_ground"));
+        statsHeader = color(lang.getString("Messages.stats_header"));
+        statsLine = color(lang.getString("Messages.stats_line"));
+        statsTotal = color(lang.getString("Messages.stats_total"));
+        statsEmpty = color(lang.getString("Messages.stats_empty"));
+        auditHeader = color(lang.getString("Messages.audit_header"));
+        auditLine = color(lang.getString("Messages.audit_line"));
+        auditEmpty = color(lang.getString("Messages.audit_empty"));
 
         expiresAtPrefix = color(lang.getString("DateFormat.expires_at"));
         usefulLifePrefix = color(lang.getString("DateFormat.useful_life"));
@@ -469,6 +536,62 @@ public final class PluginConfig {
 
     public String getItemNotFound() {
         return itemNotFound;
+    }
+
+    public String getFindUsage() {
+        return findUsage;
+    }
+
+    public String getFindNoMatch() {
+        return findNoMatch;
+    }
+
+    public String getFindResult() {
+        return findResult;
+    }
+
+    public String getFindTruncated() {
+        return findTruncated;
+    }
+
+    public String getFindHitPlayer() {
+        return findHitPlayer;
+    }
+
+    public String getFindHitContainer() {
+        return findHitContainer;
+    }
+
+    public String getFindHitGround() {
+        return findHitGround;
+    }
+
+    public String getStatsHeader() {
+        return statsHeader;
+    }
+
+    public String getStatsLine() {
+        return statsLine;
+    }
+
+    public String getStatsTotal() {
+        return statsTotal;
+    }
+
+    public String getStatsEmpty() {
+        return statsEmpty;
+    }
+
+    public String getAuditHeader() {
+        return auditHeader;
+    }
+
+    public String getAuditLine() {
+        return auditLine;
+    }
+
+    public String getAuditEmpty() {
+        return auditEmpty;
     }
 
     /** True unless the hook was switched off under Hooks.&lt;id&gt; in config.yml. */
@@ -636,6 +759,56 @@ public final class PluginConfig {
 
     public int getRecoveryKeepDays() {
         return recoveryKeepDays;
+    }
+
+    /** Settings.storage.type: flat, sqlite, mysql or mongodb. */
+    public String getStorageType() {
+        return storageType;
+    }
+
+    public String getMysqlHost() {
+        return mysqlHost;
+    }
+
+    public int getMysqlPort() {
+        return mysqlPort;
+    }
+
+    public String getMysqlDatabase() {
+        return mysqlDatabase;
+    }
+
+    public String getMysqlUser() {
+        return mysqlUser;
+    }
+
+    public String getMysqlPassword() {
+        return mysqlPassword;
+    }
+
+    public boolean isMysqlUseSsl() {
+        return mysqlUseSsl;
+    }
+
+    public int getMysqlPoolSize() {
+        return mysqlPoolSize;
+    }
+
+    public String getSqliteFile() {
+        return sqliteFile;
+    }
+
+    public String getMongodbUri() {
+        return mongodbUri;
+    }
+
+    public String getMongodbDatabase() {
+        return mongodbDatabase;
+    }
+
+    /** Maximum audit entries kept by the storage backend. */
+    public int getAuditHistory() {
+        return auditHistory;
     }
 
     public boolean isDiscordWebhookEnabled() {
@@ -850,6 +1023,26 @@ public final class PluginConfig {
         lang.addDefault("Messages.debug_usage", "&7Usage: /ti debug [on|off|export]");
         lang.addDefault("Messages.item_not_found",
                 "&cUnknown custom item: &e{id}&c. Use <plugin>:<id>, e.g. mmoitems:SWORD:CUTLASS.");
+        lang.addDefault("Messages.find_usage",
+                "&7Usage: /ti find <material|plugin:id|name>");
+        lang.addDefault("Messages.find_no_match",
+                "&7No timed items matching &e{query} &7were found.");
+        lang.addDefault("Messages.find_result",
+                "&aFound &e{count} &atimed item(s) matching &e{query}&a:");
+        lang.addDefault("Messages.find_truncated",
+                "&7...and &e{rest} &7more (showing the first {shown}).");
+        lang.addDefault("Messages.find_hit_player", " &8- &e{player} &7(slot {slot})");
+        lang.addDefault("Messages.find_hit_container", " &8- &7{world} &e{x},{y},{z} &7({type})");
+        lang.addDefault("Messages.find_hit_ground", " &8- &7{world} &e{x},{y},{z}");
+        lang.addDefault("Messages.stats_header", "&6Expired items (last {days} days):");
+        lang.addDefault("Messages.stats_line", " &e{material}&7: &a{count}");
+        lang.addDefault("Messages.stats_total", "&7Total expired: &e{count}");
+        lang.addDefault("Messages.stats_empty",
+                "&7No items have expired in the last {days} days.");
+        lang.addDefault("Messages.audit_header", "&6Audit log (page {page}):");
+        lang.addDefault("Messages.audit_line",
+                " &8[{date}] &e{actor} &7{action} &7target=&f{target} &7item=&f{item} &7{details}");
+        lang.addDefault("Messages.audit_empty", "&7The audit log is empty.");
         lang.addDefault("DateFormat.expires_at", "&cExpires: ");
         lang.addDefault("DateFormat.useful_life", "&7Lifetime: ");
         lang.addDefault("DateFormat.paused", "&7Paused: ");

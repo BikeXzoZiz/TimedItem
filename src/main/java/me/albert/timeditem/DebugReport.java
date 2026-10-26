@@ -62,6 +62,7 @@ public final class DebugReport {
         public boolean recoveryFileExists;
         public long recoveryFileBytes;
         public String recoveryFilePath = "";
+        public String storageBackend = "flat";
 
         public String generatedAt = "";
     }
@@ -99,7 +100,8 @@ public final class DebugReport {
         s.blacklistSize = config.blacklistedMaterials().size();
 
         s.recoveryEntries = plugin.recoveryStore().size();
-        Path recoveryFile = plugin.recoveryStore().file();
+        s.storageBackend = plugin.storage() == null ? "flat" : plugin.storage().backendId();
+        Path recoveryFile = plugin.getDataFolder().toPath().resolve("recovery.log");
         s.recoveryFilePath = recoveryFile.toString();
         s.recoveryFileExists = Files.exists(recoveryFile);
         if (s.recoveryFileExists) {
@@ -159,8 +161,9 @@ public final class DebugReport {
         out.append("blacklist.materials.size: ").append(s.blacklistSize).append('\n');
 
         out.append("\n[Recovery]\n");
+        out.append("storage_backend: ").append(s.storageBackend).append('\n');
         out.append("entries: ").append(s.recoveryEntries).append('\n');
-        out.append("file: ").append(s.recoveryFilePath);
+        out.append("flat_file: ").append(s.recoveryFilePath);
         if (s.recoveryFileExists) {
             out.append(" (exists, ").append(s.recoveryFileBytes).append(" bytes)");
         } else {

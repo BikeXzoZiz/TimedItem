@@ -144,6 +144,13 @@ public final class RestoreMenu implements Listener {
             player.getWorld().dropItemNaturally(player.getLocation(), rest);
         }
         player.sendMessage(plugin.pluginConfig().getPrefix() + plugin.pluginConfig().getRestoreGiven());
+        plugin.storage().appendAudit(new me.albert.timeditem.storage.AuditRecord(
+                System.currentTimeMillis(), player.getUniqueId().toString(), player.getName(),
+                me.albert.timeditem.storage.AuditRecord.RESTORE,
+                entry.getPlayer() == null ? "-" : entry.getPlayer(),
+                PdcCompat.readUid(item),
+                plugin.hooks().itemId(item) == null ? item.getType().name() : plugin.hooks().itemId(item),
+                entry.getWorld()));
         player.closeInventory();
     }
 
