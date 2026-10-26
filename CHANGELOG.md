@@ -2,6 +2,11 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [3.1.1] - 2026-10-27
+
+### Fixed
+- **รองรับ zAuctionHouse V4** — V4 (4.x) เขียนใหม่ทั้งหมดและย้าย event ขายจาก `ZSellEvent` (V3) ไปที่ `fr.maxlego08.zauctionhouse.api.event.events.sell.AuctionPreSellEvent` — hook บล็อกขายของ 3.1.0 จับไม่เจอบน V4; เพิ่ม candidate ใหม่ลำดับแรกพร้อมเก็บ candidates V3 เดิมไว้ครบ รองรับทั้งสองเวอร์ชัน (probe ตัวไหนเจอก่อนใช้ตัวนั้น); getter probe เดิมตรงกับ V4 ทุกตัว (`getItemStack()` / `getPlayer()` / `setCancelled`) ไม่ต้องแก้ hook
+
 ## [3.1.0] - 2026-10-27
 
 ### Added

@@ -83,6 +83,10 @@ public final class HookManager {
                 "org.maxgamer.quickshop.api.event.ShopCreateEvent",
                 "org.maxgamer.quickshop.Event.ShopCreateEvent"});
         hookSellBlock("zAuctionHouse", "zAuctionHouse", config, new String[]{
+                // V4 (4.x rewrite): AuctionPreSellEvent fires from a single
+                // funnel for every sell path (GUI, command, inventory)
+                "fr.maxlego08.zauctionhouse.api.event.events.sell.AuctionPreSellEvent",
+                // V3 (legacy installs)
                 "fr.maxlego08.zauctionhouse.api.event.events.ZSellEvent",
                 "fr.maxlego08.zauctionhouse.api.event.ZSellEvent",
                 "fr.maxlego08.zauctionhouse.api.event.events.ZAuctionSellEvent"});
