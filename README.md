@@ -12,7 +12,7 @@
 
 *Spigot / Paper / Purpur / Pufferfish / Leaf / Folia — jar เดียว ใช้ได้ทุกเวอร์ชัน*
 
-[เริ่มใช้](#-เริ่มใช้ใน-1-นาที) · [คำสั่ง](#-คำสั่ง) · [การตั้งค่า](#️-การตั้งค่า) · [Developer API](#-developer-api) · [Changelog](CHANGELOG.md)
+[เริ่มใช้](#-เริ่มใช้ใน-1-นาที) · [ใช้จริงทำอะไรได้](#-ใช้จริงทำอะไรได้บ้าง) · [คำสั่ง](#-คำสั่ง) · [Integration](#-integration-ปลั๊กอินอื่น) · [การตั้งค่า](#️-การตั้งค่า) · [Developer API](#-developer-api) · [FAQ](#-faq) · [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -22,6 +22,7 @@
 
 - [✨ จุดเด่น](#-จุดเด่น)
 - [🚀 เริ่มใช้ใน 1 นาที](#-เริ่มใช้ใน-1-นาที)
+- [🎯 ใช้จริงทำอะไรได้บ้าง](#-ใช้จริงทำอะไรได้บ้าง)
 - [📖 คำสั่ง](#-คำสั่ง)
 - [⏱️ กลไกหมดอายุ](#️-กลไกหมดอายุ)
 - [⚙️ การตั้งค่า](#️-การตั้งค่า)
@@ -32,6 +33,7 @@
 - [💾 การจัดเก็บข้อมูล](#-การจัดเก็บข้อมูล)
 - [🍃 Folia & ความเข้ากันได้](#-folia--ความเข้ากันได้)
 - [⬆️ Migration](#️-migration)
+- [❓ FAQ](#-faq)
 - [🛠 เทคนิคสำหรับผู้ดูแลโค้ด](#-เทคนิคสำหรับผู้ดูแลโค้ด)
 
 ---
@@ -69,6 +71,23 @@
 > **Build จากซอร์ส:** ต้องมี JDK 8+ (แนะนำ 17/21) และ Maven → `mvn package` ได้ไฟล์ที่ `target/` (unit tests รันอัตโนมัติระหว่าง build)
 > **การเปิด Release:** สร้าง release ที่ tag `v*` แล้วแนบ jar จาก `target/` ด้วยตนเอง
 
+## 🎯 ใช้จริงทำอะไรได้บ้าง
+
+| สถานการณ์ | วิธีทำด้วย TimedItem |
+|---|---|
+| 🏰 **เช่าอุปกรณ์ในดัน/ผจญภัย** | ร้าน Shopkeepers + `auto_timer: "2h"` — ผู้เล่นกดซื้อเช่า หมดเวลาของหายเอง ไม่ต้องไล่เก็บคืน |
+| 🎁 **รางวัล crate มีอายุ** | CrazyCrates + `auto_timer: "7d"` — ของที่ได้ต้องรีบใช้ กระตุ้นให้ผู้เล่นกลับมาเข้าเล่น |
+| 🗡️ **แจกของ custom แบบมีเวลา** | `/ti give Steve mmoitems:SWORD:CUTLASS 30d` — ของจาก MMOItems / ItemsAdder / Oraxen / Slimefun ฯลฯ สร้างเป็นของมีอายุทันที (console ก็ได้) |
+| 🎪 **ของ event เริ่มนับตอนใช้จริง** | ใช้ **lifetime** (`start_date_calculate_on_click: true`) — แจกวันนี้ได้เลย เวลาเริ่มนับตอนผู้เล่นใช้ครั้งแรกเท่านั้น |
+| ⏸️ **ผู้เล่นลาไปงาน/ทหารไปค่าย** | `/ti pause` หยุดเวลาไว้ก่อน กลับมา `/ti resume` — ของไม่หมดอายุระหว่างที่ไม่ได้เล่น |
+| 🛡️ **กันของสะสมตลอดกาล (no-OP gear)** | `/ti set 30d` + เตือนล่วงหน้าหลายระยะ (`stages: [600, 60, 10]`) + Discord webhook แจ้งแอดมินทุกครั้งที่ของหมดอายุ |
+| 📅 **สวัสดิ์รายเดือน / VIP ชั่วคราว** | แจกของพร้อม `/ti set 30d` ทุกเดือน — ของเก่าหมดอายุเอง วงจรรายเดือนเดินเอง |
+| 🧪 **ของทดลองใช้ก่อนซื้อ (trial)** | `/ti give Steve ei:LEGENDARY_BOW 24h` — ให้ลองของก่อนตัดสินใจซื้อของจริง หมดเวลาหายเอง |
+| 🗓️ **รางวัลภารกิจรายวัน/รายสัปดาห์** | ของ reward จากภารกิจติด timer (`/ti set 24h` / `7d`) — รางวัลเก่าหมดอายุเอง ไม่สะสมเป็นภูเขา |
+| ⚔️ **ของช่วง PVP / Raid event** | อาวุธพิเศษ event จำกัดเวลา `/ti give <player> <plugin:id> 6h` — จบ event ของหายเอง ไอเทมเทพไม่หลุดไปอยู่ในคลังคนอื่น |
+| 🌱 **Starter kit ผู้เล่นใหม่** | เกราะ + เครื่องมือพร้อมใช้ 7 วัน — ช่วยช่วงเริ่มต้นแต่บังคับให้เดินหน้า ไม่ใช่ของตลอดชีพ |
+| 💾 **กลัวของผู้เล่นหายฟ้องเซิร์ฟ** | ทุกของที่หมดอายุถูกสแนปช็อตลง recovery log ก่อนลบ — `/ti restore` คลิกคืนให้ได้ภายใน 7 วัน |
+
 ## 📖 คำสั่ง
 
 Permission ทั้งหมด: `timeditem.admin` (default: op) — ทุกคำสั่งมี **Tab completion** (ชื่อคำสั่ง, ตัวอย่างเวลา, ผู้เล่นออนไลน์, เลขหน้า)
@@ -104,6 +123,24 @@ Permission ทั้งหมด: `timeditem.admin` (default: op) — ทุก�
 - บนพื้น/เฟรม: คำสั่งที่มี `{player}` จะถูกข้าม (ไม่มีผู้เล่นอ้างอิง)
 - **เตือนล่วงหน้าหลายระยะ:** `Settings.warning.stages` เช่น `[600, 60, 10]` = เตือนตอนเหลือ 10 นาที, 1 นาที, 10 วินาที (ครั้งละหนึ่งขั้น)
 - **ผู้เล่น creative ถูกข้ามโดยดีฟอลต์** — ของ timed ในมือ creative ไม่หมดอายุและไม่มี countdown (`expire_check.ignore_creative`, default `true` เหมือนทุกเวอร์ชันก่อน 2.3.1)
+
+<details>
+<summary>🖼️ หน้าตา lore บนไอเทม (สำหรับอ้างอิง / เขียนเครื่องมือเสริม)</summary>
+
+```yaml
+# แบบ expire — นับอยู่ จะหมดอายุวันที่กำหนด
+&cExpires: 2026-11-25 18:00:00
+
+# แบบ lifetime — ยังไม่เริ่มนับ (วินาทีรวม + ป้ายหน่วย)
+&7Lifetime: 2592000 30d
+
+# แบบ paused — หยุดเวลาไว้ชั่วคราว
+&7Paused: 3600 1h
+```
+
+> บรรทัดจริงมีตัวคั่นภายใน `§s` ฝังอยู่ระหว่างค่า เพื่อให้ parser อ่านกลับได้แม้ผู้เล่นเปลี่ยนชื่อ item — ทุกบรรทัดอ่าน/เขียนผ่าน `TimeLore` เท่านั้น และ **ห้ามแก้ prefix** ใน `DateFormat` ของไฟล์ภาษาหลังมีไอเทมอยู่แล้ว (prefix คือตัวระบุบรรทัด) · บน 1.14+ ค่าจริงเก็บใน PDC ของ item อยู่แล้ว lore เป็นแค่จอแสดงผล
+
+</details>
 
 ## ⚙️ การตั้งค่า
 
@@ -142,6 +179,95 @@ Settings:
 ```
 
 **bStats:** ลงทะเบียนแล้วเป็น [TimedItemRewrite (ID 34946)](https://bstats.org/plugin/bukkit/TimedItemRewrite/34946) — ID อยู่ที่ `BSTATS_PLUGIN_ID` ใน `TimedItemPlugin.java`, ปิดสถิติได้ด้วย `Settings.metrics: false`
+
+<details>
+<summary>📄 <b>ตัวอย่าง config.yml ครบทุก key (ค่า default ล่าสุด)</b> — คลิกขยาย</summary>
+
+```yaml
+# TimedItem config.yml — ทุก key มี default ในตัว: config ขาด/เก่าแค่ไหน
+# ก็ self-heal เติมให้เอง ไม่มีวันพัง
+# ข้อความทั้งหมด (Messages/DateFormat/Gui) อยู่ที่ lang/messages_<ภาษา>.yml
+config-version: 8
+
+Settings:
+  language: en                         # en / th / ไฟล์ lang/messages_<x>.yml ของคุณ
+  start_date_calculate_on_click: true  # true = lifetime เริ่มนับเมื่อใช้ครั้งแรก · false = เริ่มทันทีตอน set
+  reset_player_health_if_armor: true   # เกราะที่เพิ่ม max health ถูกรีเซ็ตเป็น 20 เมื่อหมดอายุ (กัน exploit)
+  metrics: true                        # bStats anonymous statistics
+  debug: false                         # verbose [Debug] log — สลับได้ทันที: /ti debug on|off
+
+  # การตรวจของหมดอายุเป็นรอบ (นอกเหนือจาก event เช่น คลิก/ใช้/หยิบ)
+  expire_check:
+    enabled: true
+    interval_seconds: 10               # สแกน inventory ทุกกี่วินาที
+    scan_world_items: false            # สแกนของบนพื้น/ใน item frame/บน armor stand (แพง — เปิดเมื่อจำเป็น)
+    ignore_creative: true              # ของ timed ในมือ creative ไม่หมดอายุและไม่มี countdown
+
+  # แจ้ง Discord ทุกครั้งที่ของหมดอายุ (webhook ในตัว ไม่ต้องติดตั้งอะไรเพิ่ม)
+  discord_webhook:
+    enabled: false
+    url: ""
+    username: "TimedItem"
+    message: "{player}'s timed item expired: {item} ({world})"
+
+  # เตือนผู้เล่นล่วงหน้าหลายระยะ — แต่ละค่า = ครั้งเดียวตอนเหลือเท่านั้น
+  warning:
+    enabled: true
+    seconds: 60                        # fallback ถ้า stages ว่าง
+    stages: [60]                       # แนะนำ: [600, 60, 10] = เหลือ 10 นาที / 1 นาที / 10 วิ
+    sound:
+      name: block.note_block.pling
+      volume: 1.0
+      pitch: 1.5
+
+  particles:
+    enabled: true
+    name: FLAME                        # ชื่อ particle — ใส่ผิด fallback เป็น FLAME
+    count: 30
+
+  expiry_commands: []                  # คำสั่ง console ตอนของหมดอายุ เช่น "discord message timed {player}'s item expired!"
+
+  actionbar:
+    enabled: true
+    format: "&e⌛ {time}"              # countdown บน actionbar ตอนถือของ timed
+
+  sound:
+    enabled: true
+    name: entity.blaze.death           # เสียงตอนของหมดอายุ
+    volume: 10.0
+    pitch: 1.2
+
+  update_check:
+    enabled: true
+    repository: "BikeXzoZiz/TimedItem" # ที่ไว้เช็คเวอร์ชันใหม่ (GitHub repo)
+
+  # กู้คืนของที่หมดอายุ (/ti restore)
+  recovery:
+    enabled: true
+    max_items: 500                     # เก็บได้สูงสุดกี่รายการ
+    keep_days: 7                       # เก็บไว้กี่วัน
+
+  blacklist:
+    materials: []                      # เช่น [TOTEM_OF_UNDYING] — material ที่ห้ามมี timer เด็ดขาด
+
+# Integration กับปลั๊กอินอื่น (2.6.0+) — ตรวจจับอัตโนมัติ, ปิดรายตัวได้
+Hooks:
+  mmoitems: true
+  itemsadder: true
+  oraxen: true
+  nexo: true
+  executableitems: true
+  slimefun: true
+  ecoitems: true
+  crazycrates:
+    enabled: true
+    auto_timer: ""                     # เช่น "7d" = ของจาก crate หมดอายุอัตโนมัติ ("" = ปิด)
+  shopkeepers:
+    enabled: true
+    auto_timer: ""                     # เช่น "30d" = ของที่ซื้อจากร้านหมดอายุอัตโนมัติ ("" = ปิด)
+```
+
+</details>
 
 ## 🌐 หลายภาษา
 
@@ -206,6 +332,28 @@ Hooks:
     enabled: true
     auto_timer: "7d"      # ของที่ได้จาก crate หมดอายุใน 7 วัน
 ```
+
+<details>
+<summary>ดูค่า <b>Hooks</b> ครบทุก key (ค่า default)</summary>
+
+```yaml
+Hooks:
+  mmoitems: true          # จำได้ว่าของเป็นของ MMOItems + /ti give mmoitems:TYPE:ID
+  itemsadder: true        # + /ti give itemsadder:namespace:id (alias: ia)
+  oraxen: true            # + /ti give oraxen:id
+  nexo: true              # + /ti give nexo:id
+  executableitems: true   # + /ti give ei:<id> (alias: ei)
+  slimefun: true          # + /ti give slimefun:<ID>
+  ecoitems: true          # + /ti give ecoitems:<id> (จำจากของเป็นแบบ best-effort)
+  crazycrates:
+    enabled: true         # /ti give cc:<crate>:<prize> (alias: cc, crate)
+    auto_timer: ""        # ของจากการเปิด crate หมดอายุอัตโนมัติ
+  shopkeepers:
+    enabled: true         # auto-timer ของที่ซื้อจากร้าน (ต้อง Shopkeepers ≥ 2.19)
+    auto_timer: ""        # "" = ปิด
+```
+
+</details>
 
 > **หมายเหตุ**
 > - Hook ทำงานผ่าน **reflection ทั้งหมด** — ไม่เพิ่ม dependency, jar เดียวเหมือนเดิม; เวอร์ชัน API ที่ออกแบบกับ: MMOItems 6.10.x · ItemsAdder 4.x · Oraxen 2.x · Nexo 1.x · ExecutableItems ล่าสุด (SCore) · Slimefun RC-38 · Shopkeepers 2.20+ (ต้อง ≥ 2.19 สำหรับ auto-timer) · CrazyCrates ล่าสุด ถ้าเวอร์ชัน API ไม่ตรง hook ตัวนั้นจะปิดตัวเองอย่างปลอดภัย (ดูได้ที่ `/ti debug export`)
@@ -278,6 +426,32 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 | **v2.1.0** | bStats · CI · pause/resume · เตือนล่วงหน้า · particle/เสียง/actionbar · expiry_commands |
 
 ดูรายละเอียดทั้งหมดได้ที่ [CHANGELOG.md](CHANGELOG.md)
+
+## ❓ FAQ
+
+**ถอนการติดตั้ง TimedItem แล้ว ของที่ติด timer จะหายไหม?**
+
+ไม่หาย — timer เก็บอยู่ใน NBT/lore ของไอเทมเอง ถอนปลั๊กอินแล้วของกลายเป็นของปกติ ติดตั้งกลับมาเมื่อไหร่ตัวจับเวลานับต่อจากเดิมทันที (เก็บเป็นเวลาจริง ไม่ผูกกับ uptime ของเซิร์ฟเวอร์)
+
+**เซิร์ฟเวอร์ล่ม / รีสตาร์ทบ่อย เวลาจะคลาดเคลื่อนไหม?**
+
+ไม่ — ค่า expiry เป็น epoch millis ตามนาฬิกาจริง รีสตาร์ทกี่รอบ / เปลี่ยน timezone / ย้ายเครื่อง เวลาก็ยังตรง
+
+**ใช้กับของจากปลั๊กอินอื่นได้ไหม?**
+
+ได้ — 9 เจ้าถูกจำตัวตนอัตโนมัติ (MMOItems, ItemsAdder, Oraxen, Nexo, ExecutableItems, Slimefun, EcoItems, CrazyCrates, Shopkeepers — ดู [Integration](#-integration-ปลั๊กอินอื่น)) ส่วนปลั๊กอินที่สร้าง ItemStack vanilla ปกติ (เช่น item ของ MythicMobs, ของจาก /give) ใช้ได้ทันทีอยู่แล้วเพราะ TimedItem ทำงานกับทุก ItemStack
+
+**ผู้เล่นลบ/แก้ lore timer ออกเองได้ไหม?**
+
+ทำไม่ได้ด้วยวิธีปกติในเกม (ทั่ง/ตู้เสบียงแก้ lore ไม่ได้) — และแม้ lore โดนแตะ บน 1.14+ ค่าจริงเก็บใน PersistentDataContainer ของ item ที่ผู้เล่นแตะไม่ถึง ย้ายของข้าม chest/ender chest/โยนพื้น/เข้า hopper timer ก็ไม่หาย
+
+**ของหมดอายุไปแล้ว ผู้เล่นขอคืนได้ไหม?**
+
+ได้ถ้าแอดมินยินยิม — ทุกของที่หมดอายุถูกสแนปช็อตลง `recovery.log` ก่อนลบเสมอ (เก็บ NBT ครบทั้งก้อน รวมของ custom จาก plugin อื่น) แอดมินใช้ `/ti restore` คลิกคืนให้ได้ภายใน `recovery.keep_days`
+
+**เซิร์ฟเวอร์เก่า (1.13) ใช้ได้จริงเหรอ?**
+
+จริง — compile เป็น Java 8 bytecode ใช้ได้ตั้งแต่ 1.13 (บน 1.13 เก็บใน lore แทน PDC) ถ้าวันหนึ่งอัปเกรดเซิร์ฟเวอร์ item เดิมจะถูกย้ายเข้า PDC เองตอนแตะครั้งแรก ไม่ต้อง migrate มือ
 
 ## 🛠 เทคนิคสำหรับผู้ดูแลโค้ด
 
