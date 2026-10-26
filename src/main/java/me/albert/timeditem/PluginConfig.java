@@ -93,6 +93,8 @@ public final class PluginConfig {
     private String expiresAtPrefix;
     private String usefulLifePrefix;
     private String pausedPrefix;
+    private String playtimePrefix;
+    private String heldPrefix;
     private String unitS;
     private String unitM;
     private String unitH;
@@ -156,6 +158,8 @@ public final class PluginConfig {
     private String guiStatusTypeExpire;
     private String guiStatusTypePaused;
     private String guiStatusTypeLifetime;
+    private String guiStatusTypePlaytime;
+    private String guiStatusTypeHeld;
     private String guiStatusRemaining;
     private String guiStatusExpiresAt;
     private String guiStatusDuration;
@@ -184,7 +188,7 @@ public final class PluginConfig {
     public void load() {
         plugin.saveDefaultConfig();
         FileConfiguration raw = plugin.getConfig();
-        raw.addDefault("config-version", 10);
+        raw.addDefault("config-version", 11);
         raw.addDefault("Settings.language", "en");
         raw.addDefault("Settings.start_date_calculate_on_click", true);
         raw.addDefault("Settings.reset_player_health_if_armor", true);
@@ -362,6 +366,8 @@ public final class PluginConfig {
         guiStatusTypeExpire = color(lang.getString("Gui.status_type_expire"));
         guiStatusTypePaused = color(lang.getString("Gui.status_type_paused"));
         guiStatusTypeLifetime = color(lang.getString("Gui.status_type_lifetime"));
+        guiStatusTypePlaytime = color(lang.getString("Gui.status_type_playtime"));
+        guiStatusTypeHeld = color(lang.getString("Gui.status_type_held"));
         guiStatusRemaining = color(lang.getString("Gui.status_remaining"));
         guiStatusExpiresAt = color(lang.getString("Gui.status_expires_at"));
         guiStatusDuration = color(lang.getString("Gui.status_duration"));
@@ -432,6 +438,8 @@ public final class PluginConfig {
         expiresAtPrefix = color(lang.getString("DateFormat.expires_at"));
         usefulLifePrefix = color(lang.getString("DateFormat.useful_life"));
         pausedPrefix = color(lang.getString("DateFormat.paused"));
+        playtimePrefix = color(lang.getString("DateFormat.playtime"));
+        heldPrefix = color(lang.getString("DateFormat.held"));
         unitS = lang.getString("DateFormat.s", "s");
         unitM = lang.getString("DateFormat.m", "m");
         unitH = lang.getString("DateFormat.h", "h");
@@ -803,6 +811,14 @@ public final class PluginConfig {
         return pausedPrefix;
     }
 
+    public String getPlaytimePrefix() {
+        return playtimePrefix;
+    }
+
+    public String getHeldPrefix() {
+        return heldPrefix;
+    }
+
     public String getUnitS() {
         return unitS;
     }
@@ -1057,6 +1073,14 @@ public final class PluginConfig {
         return guiStatusTypeLifetime;
     }
 
+    public String getGuiStatusTypePlaytime() {
+        return guiStatusTypePlaytime;
+    }
+
+    public String getGuiStatusTypeHeld() {
+        return guiStatusTypeHeld;
+    }
+
     public String getGuiStatusRemaining() {
         return guiStatusRemaining;
     }
@@ -1240,6 +1264,8 @@ public final class PluginConfig {
         lang.addDefault("DateFormat.expires_at", "&cExpires: ");
         lang.addDefault("DateFormat.useful_life", "&7Lifetime: ");
         lang.addDefault("DateFormat.paused", "&7Paused: ");
+        lang.addDefault("DateFormat.playtime", "&6Playtime: ");
+        lang.addDefault("DateFormat.held", "&6Held time: ");
         lang.addDefault("DateFormat.s", "s");
         lang.addDefault("DateFormat.m", "m");
         lang.addDefault("DateFormat.h", "h");
@@ -1256,6 +1282,8 @@ public final class PluginConfig {
         lang.addDefault("Gui.status_type_expire", "&7Type: &eexpire");
         lang.addDefault("Gui.status_type_paused", "&7Type: &epaused");
         lang.addDefault("Gui.status_type_lifetime", "&7Type: &elifetime (not started)");
+        lang.addDefault("Gui.status_type_playtime", "&7Type: &eplaytime (while online)");
+        lang.addDefault("Gui.status_type_held", "&7Type: &eheld time (while held/worn)");
         lang.addDefault("Gui.status_remaining", "&7Remaining: &e{time}");
         lang.addDefault("Gui.status_expires_at", "&7Expires at: &e{date}");
         lang.addDefault("Gui.status_duration", "&7Duration: &e{time}");

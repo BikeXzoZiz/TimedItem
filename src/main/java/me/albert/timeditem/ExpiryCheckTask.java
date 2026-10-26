@@ -54,6 +54,7 @@ public final class ExpiryCheckTask implements Runnable {
                     if (player.isOnline()
                             && !(config.isIgnoreCreative()
                                     && player.getGameMode() == GameMode.CREATIVE)) {
+                        listener.tickCountdownTimers(player, config);
                         listener.scanInventory(player, false);
                     }
                 });
@@ -64,6 +65,7 @@ public final class ExpiryCheckTask implements Runnable {
             if (config.isIgnoreCreative() && player.getGameMode() == GameMode.CREATIVE) {
                 continue;
             }
+            listener.tickCountdownTimers(player, config);
             listener.scanInventory(player, false);
         }
         if (config.isScanWorldItems()) {

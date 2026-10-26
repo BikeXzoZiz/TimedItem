@@ -83,7 +83,7 @@ public final class TimedItemExpansion extends PlaceholderExpansion {
             case "seconds":
                 return info.getSeconds() >= 0 ? String.valueOf(info.getSeconds()) : null;
             case "type":
-                return info.getType() == TimeLore.Type.PAUSED ? "paused" : "lifetime";
+                return info.getType().name().toLowerCase(java.util.Locale.ROOT);
             case "date":
                 return null;
             case "itemid":

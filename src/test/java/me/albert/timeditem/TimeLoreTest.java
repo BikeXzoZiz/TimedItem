@@ -22,6 +22,8 @@ class TimeLoreTest {
     private static final String EXPIRE_PREFIX = "Expires: ";
     private static final String LIFE_PREFIX = "Lifetime: ";
     private static final String PAUSED_PREFIX = "Paused: ";
+    private static final String PLAYTIME_PREFIX = "Playtime: ";
+    private static final String HELD_PREFIX = "Held time: ";
 
     private static Map<String, Long> units() {
         Map<String, Long> map = new HashMap<String, Long>();
@@ -34,7 +36,8 @@ class TimeLoreTest {
 
     private static TimeLore.TimerInfo analyze(String... lines) {
         List<String> lore = Arrays.asList(lines);
-        return TimeLore.analyzeLore(lore, EXPIRE_PREFIX, LIFE_PREFIX, PAUSED_PREFIX, units());
+        return TimeLore.analyzeLore(lore, EXPIRE_PREFIX, LIFE_PREFIX, PAUSED_PREFIX,
+                PLAYTIME_PREFIX, HELD_PREFIX, units());
     }
 
     @Test
@@ -76,6 +79,19 @@ class TimeLoreTest {
         assertNotNull(info);
         assertEquals(TimeLore.Type.PAUSED, info.getType());
         assertEquals(600L, info.getSeconds());
+    }
+
+    @Test
+    void classifiesPlaytimeAndHeldLines() {
+        TimeLore.TimerInfo playtime = analyze("Playtime: §s36000§s10h");
+        assertNotNull(playtime);
+        assertEquals(TimeLore.Type.PLAYTIME, playtime.getType());
+        assertEquals(36000L, playtime.getSeconds());
+
+        TimeLore.TimerInfo held = analyze("Held time: §s1800§s30m");
+        assertNotNull(held);
+        assertEquals(TimeLore.Type.HELD, held.getType());
+        assertEquals(1800L, held.getSeconds());
     }
 
     @Test

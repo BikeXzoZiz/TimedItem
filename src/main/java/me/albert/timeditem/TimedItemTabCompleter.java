@@ -25,6 +25,8 @@ public final class TimedItemTabCompleter implements TabCompleter {
             "find", "stats", "audit", "debug", "reload");
     private static final List<String> TIME_HINTS =
             Arrays.asList("60s", "5m", "30m", "1h", "6h", "1d", "1d12h", "7d", "30d");
+    private static final List<String> COUNTDOWN_HINTS = Arrays.asList("playtime", "held");
+    private static final List<String> COUNTDOWN_TOKENS = Arrays.asList("playtime:", "held:");
     private static final List<String> AMOUNT_HINTS = Arrays.asList("1", "16", "32", "64");
     private static final List<String> DEBUG_HINTS = Arrays.asList("on", "off", "export");
     private static final List<String> STATS_DAYS = Arrays.asList("1", "7", "14", "30");
@@ -41,7 +43,12 @@ public final class TimedItemTabCompleter implements TabCompleter {
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (sub.equals("set") || sub.equals("add")) {
             if (args.length == 2) {
+                if (sub.equals("set")) {
+                    filter(COUNTDOWN_HINTS, args[1], out);
+                }
                 filter(TIME_HINTS, args[1], out);
+            } else if (args.length == 3 && COUNTDOWN_HINTS.contains(args[1].toLowerCase(Locale.ROOT))) {
+                filter(TIME_HINTS, args[2], out);
             }
         } else if (sub.equals("give")) {
             if (args.length == 2) {
@@ -55,10 +62,12 @@ public final class TimedItemTabCompleter implements TabCompleter {
                 if (plugin.hooks() != null) {
                     filter(plugin.hooks().tokens(), args[2], out);
                 }
+                filter(COUNTDOWN_TOKENS, args[2], out);
                 filter(TIME_HINTS, args[2], out);
             } else if (args.length == 4) {
                 // custom flow expects the duration here, the legacy
                 // flow the amount - offer both sets
+                filter(COUNTDOWN_TOKENS, args[3], out);
                 filter(TIME_HINTS, args[3], out);
                 filter(AMOUNT_HINTS, args[3], out);
             } else if (args.length == 5) {

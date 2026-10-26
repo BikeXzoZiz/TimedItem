@@ -41,7 +41,11 @@ public final class TimeLore {
         /** Carries a lifetime that starts counting on first use. */
         LIFETIME,
         /** Carries a frozen remaining time; counts down only after resuming. */
-        PAUSED
+        PAUSED,
+        /** Counts down only while the owner is online (2.9+); seconds-based. */
+        PLAYTIME,
+        /** Counts down only while held in a hand or worn (2.9+); seconds-based. */
+        HELD
     }
 
     /** Immutable snapshot of an item's timer, read in a single pass. */
@@ -97,15 +101,18 @@ public final class TimeLore {
         }
         return analyzeLore(meta.getLore(),
                 config.getExpiresAtPrefix(), config.getUsefulLifePrefix(), config.getPausedPrefix(),
+                config.getPlaytimePrefix(), config.getHeldPrefix(),
                 config.unitSeconds());
     }
 
     /** Pure lore-based analysis (no Bukkit access; used by tests too). */
     public static TimerInfo analyzeLore(List<String> lore, String expirePrefix, String lifePrefix,
-                                        String pausedPrefix, Map<String, Long> units) {
+                                        String pausedPrefix, String playtimePrefix,
+                                        String heldPrefix, Map<String, Long> units) {
         for (String line : lore) {
             if (!line.startsWith(expirePrefix) && !line.startsWith(lifePrefix)
-                    && !line.startsWith(pausedPrefix)) {
+                    && !line.startsWith(pausedPrefix) && !line.startsWith(playtimePrefix)
+                    && !line.startsWith(heldPrefix)) {
                 continue;
             }
             String[] parts = line.split(DELIMITER);
@@ -119,6 +126,10 @@ public final class TimeLore {
                 }
             } else if (line.startsWith(lifePrefix)) {
                 return new TimerInfo(Type.LIFETIME, null, secondsFromParts(parts, units), line);
+            } else if (line.startsWith(playtimePrefix)) {
+                return new TimerInfo(Type.PLAYTIME, null, secondsFromParts(parts, units), line);
+            } else if (line.startsWith(heldPrefix)) {
+                return new TimerInfo(Type.HELD, null, secondsFromParts(parts, units), line);
             } else {
                 return new TimerInfo(Type.PAUSED, null, secondsFromParts(parts, units), line);
             }
@@ -144,6 +155,14 @@ public final class TimeLore {
 
     public static long pausedSeconds(ItemStack item, PluginConfig config) {
         return secondsOf(item, config, Type.PAUSED);
+    }
+
+    public static long playtimeSeconds(ItemStack item, PluginConfig config) {
+        return secondsOf(item, config, Type.PLAYTIME);
+    }
+
+    public static long heldSeconds(ItemStack item, PluginConfig config) {
+        return secondsOf(item, config, Type.HELD);
     }
 
     public static boolean isExpired(ItemStack item, PluginConfig config, LocalDateTime now) {
@@ -185,6 +204,16 @@ public final class TimeLore {
     /** Freezes the given remaining time on the item, replacing any previous timer. */
     public static void applyPaused(ItemStack item, PluginConfig config, long seconds) {
         write(item, config, Type.PAUSED, seconds);
+    }
+
+    /** Stamps a playtime countdown (ticks only while the owner is online), replacing any previous timer. */
+    public static void applyPlaytime(ItemStack item, PluginConfig config, long seconds) {
+        write(item, config, Type.PLAYTIME, seconds);
+    }
+
+    /** Stamps a held-time countdown (ticks only while held or worn), replacing any previous timer. */
+    public static void applyHeld(ItemStack item, PluginConfig config, long seconds) {
+        write(item, config, Type.HELD, seconds);
     }
 
     /**
@@ -251,9 +280,25 @@ public final class TimeLore {
             String line = config.getExpiresAtPrefix() + DELIMITER + LORE_FORMAT.format(expiry);
             return new TimerInfo(Type.EXPIRE, expiry, -1L, line);
         }
-        String prefix = type == Type.LIFETIME ? config.getUsefulLifePrefix() : config.getPausedPrefix();
+        String prefix = prefixOf(type, config);
         String line = prefix + DELIMITER + value + DELIMITER + formatDuration(value, config);
         return new TimerInfo(type, null, value, line);
+    }
+
+    /** The lore prefix of a seconds-based timer type. */
+    private static String prefixOf(Type type, PluginConfig config) {
+        switch (type) {
+            case LIFETIME:
+                return config.getUsefulLifePrefix();
+            case PAUSED:
+                return config.getPausedPrefix();
+            case PLAYTIME:
+                return config.getPlaytimePrefix();
+            case HELD:
+                return config.getHeldPrefix();
+            default:
+                return config.getExpiresAtPrefix();
+        }
     }
 
     private static long secondsOf(ItemStack item, PluginConfig config, Type expected) {
@@ -288,14 +333,11 @@ public final class TimeLore {
         }
         List<String> kept = new ArrayList<String>();
         if (meta.hasLore() && meta.getLore() != null) {
-            String expirePrefix = config.getExpiresAtPrefix();
-            String lifePrefix = config.getUsefulLifePrefix();
-            String pausedPrefix = config.getPausedPrefix();
             for (String entry : meta.getLore()) {
-                if (!entry.startsWith(expirePrefix) && !entry.startsWith(lifePrefix)
-                        && !entry.startsWith(pausedPrefix)) {
-                    kept.add(entry);
+                if (isTimerLine(entry, config)) {
+                    continue;
                 }
+                kept.add(entry);
             }
         }
         if (type != null) {
@@ -310,12 +352,21 @@ public final class TimeLore {
         }
     }
 
+    /** True when the lore line belongs to any TimedItem timer type. */
+    private static boolean isTimerLine(String line, PluginConfig config) {
+        return line.startsWith(config.getExpiresAtPrefix())
+                || line.startsWith(config.getUsefulLifePrefix())
+                || line.startsWith(config.getPausedPrefix())
+                || line.startsWith(config.getPlaytimePrefix())
+                || line.startsWith(config.getHeldPrefix());
+    }
+
     private static String buildLine(Type type, long value, PluginConfig config) {
         if (type == Type.EXPIRE) {
             LocalDateTime expiry = LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneId.systemDefault());
             return config.getExpiresAtPrefix() + DELIMITER + LORE_FORMAT.format(expiry);
         }
-        String prefix = type == Type.LIFETIME ? config.getUsefulLifePrefix() : config.getPausedPrefix();
+        String prefix = prefixOf(type, config);
         return prefix + DELIMITER + value + DELIMITER + formatDuration(value, config);
     }
 
@@ -328,6 +379,12 @@ public final class TimeLore {
         }
         if ("paused".equals(name)) {
             return Type.PAUSED;
+        }
+        if ("playtime".equals(name)) {
+            return Type.PLAYTIME;
+        }
+        if ("held".equals(name)) {
+            return Type.HELD;
         }
         return null;
     }

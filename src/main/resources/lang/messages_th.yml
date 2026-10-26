@@ -65,6 +65,8 @@ DateFormat:
   useful_life: "&7อายุการใช้งาน: "
   # แสดงบนไอเทมที่หยุดเวลาไว้ด้วย /ti pause
   paused: "&7หยุดไว้: "
+  playtime: "&6เวลาเล่น: "
+  held: "&6เวลาถือ: "
   # หน่วยเวลาที่ใช้กับ /ti set และแสดงใน lore เช่น 1d12h30m
   # ให้เหมือนกันทุกไฟล์ภาษา และห้ามแก้หลังมีไอเทมอยู่แล้ว
   # เพราะหน่วยเป็นส่วนหนึ่งของฟอร์แมต lore ที่เก็บไว้
@@ -87,6 +89,8 @@ Gui:
   status_type_expire: "&7ประเภท: &eนับถอยหลัง"
   status_type_paused: "&7ประเภท: &eหยุดไว้"
   status_type_lifetime: "&7ประเภท: &eอายุการใช้งาน (ยังไม่เริ่ม)"
+  status_type_playtime: "&7ประเภท: &eเวลาเล่น (นับตอนออนไลน์)"
+  status_type_held: "&7ประเภท: &eเวลาถือ (นับตอนถือ/สวม)"
   status_remaining: "&7เวลาที่เหลือ: &e{time}"
   status_expires_at: "&7หมดอายุเมื่อ: &e{date}"
   status_duration: "&7ระยะเวลา: &e{time}"

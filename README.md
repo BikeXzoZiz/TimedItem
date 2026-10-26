@@ -42,7 +42,7 @@
 
 | | ฟีเจอร์ | รายละเอียด |
 |---|---|---|
-| ⏱️ | **Timer 3 แบบ** | หมดอายุตามวัน (expire) · อายุการใช้งานเริ่มนับเมื่อใช้ครั้งแรก (lifetime) · หยุดเวลาชั่วคราว (pause) |
+| ⏱️ | **Timer 5 แบบ** | หมดอายุตามวัน (expire) · เริ่มนับเมื่อใช้ครั้งแรก (lifetime) · หยุดชั่วคราว (pause) · **นับตอนออนไลน์ (playtime)** · **นับตอนถือ/สวม (held)** |
 | 🔥 | **แปลงร่างเมื่อหมดอายุ** | ของหมดอายุกลายเป็น "เถ้าถ่าน"/ของอื่นแทนการหาย — vanilla หรือ custom item ก็ได้ (ตั้งแต่ 2.8.0) |
 | 🎟️ | **ตัวต่ออายุ + Grace period** | แจก token ต่ออายุ (คลิกขวา) · ช่วงท้ายใช้งานไม่ได้ก่อนหายจริง (ตั้งแต่ 2.8.0) |
 | 💾 | **เก็บใน NBT** | ตัวจับเวลาอยู่ใน PersistentDataContainer ของไอเทม — แก้ lore ยังไง timer ก็ไม่หาย |
@@ -60,7 +60,7 @@
 
 ## 🚀 เริ่มใช้ใน 1 นาที
 
-1. ดาวน์โหลด `TimedItem-2.8.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
+1. ดาวน์โหลด `TimedItem-2.9.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
 2. รีสตาร์ทเซิร์ฟเวอร์ — เสร็จ! (ค่า default ใช้ได้ทันที)
 3. ลองเลย:
 
@@ -99,8 +99,10 @@ Permission ทั้งหมด: `timeditem.admin` (default: op) — ทุก�
 | คำสั่ง | คำอธิบาย |
 |---|---|
 | `/ti set <เวลา>` | ประทับเวลาบนไอเทมที่ถือ เช่น `/ti set 1d12h30m` หรือแบบเก่า `/ti set 120 s` — เติม `transform:<key>` เพื่อระบุผลแปลงร่างตอนหมดอายุ เช่น `/ti set 7d transform:ash` |
+| `/ti set playtime <เวลา>` / `/ti set held <เวลา>` | ตัวจับเวลาแบบนับเฉพาะตอน **ออนไลน์** (playtime) หรือตอน **ถือ/สวม** (held) — เช่น `/ti set playtime 10h` |
 | `/ti add <เวลา>` | ต่อเวลา — ใช้ได้ทั้งไอเทมที่เริ่มนับแล้ว, ยังไม่เริ่ม และ paused |
 | `/ti give <ผู้เล่น> <เวลา> [จำนวน]` | หยิบไอเทมในมือ ตั้งเวลา แล้วส่งให้ผู้เล่นเป้าหมายทันที (default 1 ชิ้น, หักจากมือผู้ส่ง) — รองรับ `transform:<key>` เหมือนกัน |
+| `/ti give <ผู้เล่น> playtime:<เวลา> [จำนวน]` / `held:<เวลา>` | แจกไอเทมพร้อมตัวจับเวลาแบบ playtime/held ทันที — ใช้กับของ custom ได้: `/ti give Steve mmoitems:SWORD:X playtime:5h` |
 | `/ti give <ผู้เล่น> <plugin:id> <เวลา> [จำนวน]` | สร้างของ custom จากปลั๊กอินที่ integrate เป็น timed item ทันที เช่น `/ti give Steve mmoitems:SWORD:CUTLASS 30d` — console ใช้ได้ (ดู [Integration](#-integration-ปลั๊กอินอื่น)) |
 | `/ti pause` | หยุดเวลาชั่วคราว — ไอเทมไม่หมดอายุระหว่างหยุด |
 | `/ti resume` | เดินเวลาต่อจากเดิม |

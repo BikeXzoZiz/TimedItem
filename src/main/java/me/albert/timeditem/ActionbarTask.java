@@ -12,8 +12,9 @@ import java.time.LocalDateTime;
 /**
  * Shows the remaining time of the held timed item in the actionbar,
  * refreshed once per second. Covers every timer type: counting
- * down (EXPIRE), frozen remaining time (PAUSED) and the not-yet-started
- * lifetime total (LIFETIME).
+ * down (EXPIRE), frozen remaining time (PAUSED), the not-yet-started
+ * lifetime total (LIFETIME) and the seconds-based countdowns
+ * PLAYTIME / HELD (2.9+).
  */
 public final class ActionbarTask implements Runnable {
 
@@ -61,14 +62,11 @@ public final class ActionbarTask implements Runnable {
         long remaining;
         if (info.getType() == TimeLore.Type.EXPIRE && info.getExpiry() != null) {
             remaining = Duration.between(LocalDateTime.now(), info.getExpiry()).getSeconds();
-        } else if (info.getType() == TimeLore.Type.PAUSED
-                || info.getType() == TimeLore.Type.LIFETIME) {
-            remaining = info.getSeconds();
         } else {
-            return;
+            remaining = info.getSeconds();
         }
         if (remaining < 0) {
-            remaining = 0;
+            return;
         }
         String text = PluginConfig.color(config.getActionbarFormat()
                 .replace("{time}", TimeLore.formatDuration(remaining, config)));

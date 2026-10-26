@@ -219,11 +219,21 @@ public final class TimedItemCommand implements CommandExecutor {
             return;
         }
         ArgScan scan = scanArgs(args);
-        if (scan.args.length < 2) {
+        // /ti set playtime <time> / /ti set held <time> (2.9+)
+        String countdownType = null;
+        String[] durationArgs = scan.args;
+        if (scan.args.length >= 2) {
+            String lower = scan.args[1].toLowerCase(Locale.ROOT);
+            if (lower.equals("playtime") || lower.equals("held")) {
+                countdownType = lower;
+                durationArgs = shiftFirst(scan.args);
+            }
+        }
+        if (durationArgs.length < 2) {
             player.sendMessage(config.getPrefix() + config.getInvalidUsage());
             return;
         }
-        long seconds = parseDuration(scan.args, config);
+        long seconds = parseDuration(durationArgs, config);
         if (seconds <= 0) {
             player.sendMessage(config.getPrefix() + config.getInvalidUsage());
             return;
@@ -235,9 +245,15 @@ public final class TimedItemCommand implements CommandExecutor {
             player.sendMessage(config.getPrefix() + config.getMaterialBlacklisted());
             return;
         }
-        TimeLore.applyLifetime(item, config, seconds);
-        if (!config.isStartDateCalculateOnClick()) {
-            TimeLore.startLifetime(item, config);
+        if ("playtime".equals(countdownType)) {
+            TimeLore.applyPlaytime(item, config, seconds);
+        } else if ("held".equals(countdownType)) {
+            TimeLore.applyHeld(item, config, seconds);
+        } else {
+            TimeLore.applyLifetime(item, config, seconds);
+            if (!config.isStartDateCalculateOnClick()) {
+                TimeLore.startLifetime(item, config);
+            }
         }
         if (scan.transformKey != null) {
             PdcCompat.writeTransform(item, scan.transformKey);
@@ -245,6 +261,48 @@ public final class TimedItemCommand implements CommandExecutor {
         String pretty = TimeLore.formatDuration(seconds, config);
         player.sendMessage(config.getPrefix() + config.getTimeSet().replace("{time}", pretty));
         audit(player, AuditRecord.SET, player.getName(), item, pretty, config);
+    }
+
+    /** Drops one argument (the playtime/held selector) by shifting the rest left. */
+    private static String[] shiftFirst(String[] args) {
+        String[] shifted = new String[args.length - 1];
+        shifted[0] = args[0];
+        System.arraycopy(args, 2, shifted, 1, args.length - 2);
+        return shifted;
+    }
+
+    /**
+     * Recognizes "playtime:&lt;time&gt;" / "held:&lt;time&gt;" at args[index]
+     * (2.9+): returns "playtime"/"held" and rewrites the token in place to
+     * the bare duration, or null when the token is something else.
+     */
+    private static String extractCountdownPrefix(String[] args, int index) {
+        if (args.length <= index) {
+            return null;
+        }
+        String token = args[index];
+        String lower = token.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("playtime:")) {
+            args[index] = token.substring("playtime:".length());
+            return "playtime";
+        }
+        if (lower.startsWith("held:")) {
+            args[index] = token.substring("held:".length());
+            return "held";
+        }
+        return null;
+    }
+
+    /** Applies the give duration in the requested timer kind. */
+    private static void applyGiveTimer(ItemStack item, PluginConfig config, String countdownType,
+                                       long seconds) {
+        if ("playtime".equals(countdownType)) {
+            TimeLore.applyPlaytime(item, config, seconds);
+        } else if ("held".equals(countdownType)) {
+            TimeLore.applyHeld(item, config, seconds);
+        } else {
+            TimeLore.applyExpiry(item, config, seconds);
+        }
     }
 
     private void handleAdd(CommandSender sender, String[] args, PluginConfig config) {
@@ -307,6 +365,24 @@ public final class TimedItemCommand implements CommandExecutor {
                     .replace("{time}", TimeLore.formatDuration(newSeconds, config)));
             audit(player, AuditRecord.ADD, player.getName(), item,
                     "+" + TimeLore.formatDuration(delta, config), config);
+        } else if (type == TimeLore.Type.PLAYTIME || type == TimeLore.Type.HELD) {
+            long seconds = type == TimeLore.Type.PLAYTIME
+                    ? TimeLore.playtimeSeconds(item, config)
+                    : TimeLore.heldSeconds(item, config);
+            if (seconds <= 0) {
+                player.sendMessage(config.getPrefix() + config.getNoTimer());
+                return;
+            }
+            long newSeconds = seconds + delta;
+            if (type == TimeLore.Type.PLAYTIME) {
+                TimeLore.applyPlaytime(item, config, newSeconds);
+            } else {
+                TimeLore.applyHeld(item, config, newSeconds);
+            }
+            player.sendMessage(config.getPrefix() + config.getTimeAdded()
+                    .replace("{time}", TimeLore.formatDuration(newSeconds, config)));
+            audit(player, AuditRecord.ADD, player.getName(), item,
+                    "+" + TimeLore.formatDuration(delta, config), config);
         } else {
             player.sendMessage(config.getPrefix() + config.getNoTimer());
         }
@@ -329,6 +405,8 @@ public final class TimedItemCommand implements CommandExecutor {
     private void handleGive(CommandSender sender, String[] args, PluginConfig config) {
         ArgScan scan = scanArgs(args);
         args = scan.args;
+        // "playtime:<time>" / "held:<time>" as the duration token (2.9+)
+        String countdownType = extractCountdownPrefix(args, 2);
         if (args.length >= 3 && args[2].indexOf(':') >= 0) {
             handleGiveCustom(sender, args, config, scan.transformKey);
             return;
@@ -378,7 +456,7 @@ public final class TimedItemCommand implements CommandExecutor {
         }
         ItemStack gift = held.clone();
         gift.setAmount(amount);
-        TimeLore.applyExpiry(gift, config, seconds);
+        applyGiveTimer(gift, config, countdownType, seconds);
         if (scan.transformKey != null) {
             PdcCompat.writeTransform(gift, scan.transformKey);
         }
@@ -412,6 +490,7 @@ public final class TimedItemCommand implements CommandExecutor {
             sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
             return;
         }
+        String countdownType = extractCountdownPrefix(args, 3);
         Player target = Bukkit.getPlayerExact(args[1]);
         if (target == null) {
             sender.sendMessage(config.getPrefix()
@@ -452,7 +531,7 @@ public final class TimedItemCommand implements CommandExecutor {
         }
         amount = Math.min(amount, built.getMaxStackSize());
         built.setAmount(amount);
-        TimeLore.applyExpiry(built, config, seconds);
+        applyGiveTimer(built, config, countdownType, seconds);
         if (transformKey != null) {
             PdcCompat.writeTransform(built, transformKey);
         }
@@ -551,6 +630,15 @@ public final class TimedItemCommand implements CommandExecutor {
                 return;
             }
             message = config.getTimerPaused().replace("{time}", TimeLore.formatDuration(seconds, config));
+        } else if (type == TimeLore.Type.PLAYTIME || type == TimeLore.Type.HELD) {
+            long seconds = type == TimeLore.Type.PLAYTIME
+                    ? TimeLore.playtimeSeconds(item, config)
+                    : TimeLore.heldSeconds(item, config);
+            if (seconds <= 0) {
+                player.sendMessage(config.getPrefix() + config.getNoTimer());
+                return;
+            }
+            message = config.getInfoRemaining().replace("{time}", TimeLore.formatDuration(seconds, config));
         } else {
             long seconds = TimeLore.lifetimeSeconds(item, config);
             if (seconds <= 0) {

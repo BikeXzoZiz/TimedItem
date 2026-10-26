@@ -66,6 +66,8 @@ DateFormat:
   useful_life: "&7Lifetime: "
   # Shown on items whose timer was frozen with /ti pause
   paused: "&7Paused: "
+  playtime: "&6Playtime: "
+  held: "&6Held time: "
   # Unit labels used by /ti set and shown in the lore, e.g. 1d12h30m.
   # Keep these identical across language files and do not change them
   # once items exist - the label is part of the stored lore format.
@@ -88,6 +90,8 @@ Gui:
   status_type_expire: "&7Type: &eexpire"
   status_type_paused: "&7Type: &epaused"
   status_type_lifetime: "&7Type: &elifetime (not started)"
+  status_type_playtime: "&7Type: &eplaytime (while online)"
+  status_type_held: "&7Type: &eheld time (while held/worn)"
   status_remaining: "&7Remaining: &e{time}"
   status_expires_at: "&7Expires at: &e{date}"
   status_duration: "&7Duration: &e{time}"

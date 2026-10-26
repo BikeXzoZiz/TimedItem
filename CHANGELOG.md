@@ -2,6 +2,22 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [2.9.0] - 2026-10-26
+
+### Added
+- **ประเภทตัวจับเวลาใหม่ 2 แบบ** (ต่อยอดจาก expire / lifetime / paused):
+  - **PLAYTIME — อายุการเล่น** (`/ti set playtime 10h`) — นับถอยหลัง **เฉพาะตอนเจ้าของออนไลน์** — ของไม่หมดอายุระหว่างผู้เล่นออฟไลน์ เหมาะกับกิลด์เกียร์/ของเช่ารายชั่วโมงเล่น
+  - **HELD — เวลาถือ** (`/ti set held 30m`) — นับเฉพาะตอน **ถือในมือ, มือรอง หรือสวมใส่** — วางใน chest ก็หยุดเอง เหมาะกับอาวุธผลาญเวลาการใช้งาน
+- **Give ได้ทั้ง 2 แบบทันที**: `/ti give <player> playtime:<time> [amount]` · `/ti give <player> held:<time> [amount]` — ใช้กับของ custom ได้ด้วย (`/ti give Steve mmoitems:SWORD:X playtime:5h`)
+- `/ti add` ต่อเวลาได้ทุกประเภท (รวม playtime/held) · `/ti info` + `/ti menu` แสดงประเภทและเวลาที่เหลือถูกต้อง · **Renewal token ต่ออายุ playtime/held ได้** · actionbar countdown และ PlaceholderAPI (`%timeditem_remaining%`, `%timeditem_type%` คืน `playtime`/`held`) รองรับเต็มรูปแบบ
+- Tab completion: `/ti set` เสนอ `playtime`/`held`, give เสนอ `playtime:`/`held:` tokens
+
+### Technical
+- `TimeLore.Type` เพิ่ม `PLAYTIME`/`HELD` — PDC เก็บ "วินาทีคงเหลือ" (เหมือน paused), lore prefix ใหม่ `DateFormat.playtime` / `DateFormat.held` (ปรับได้ทั้ง 2 ภาษา, ไฟล์ lore เก่าไม่ได้รับผลกระทบ)
+- **Tick logic ใหม่ใน ExpiryCheckTask** (`ExpiryListener.tickCountdownTimers`) — ลดวินาที **รอบละครั้งเท่านั้น** (ตาม `expire_check.interval_seconds`, default 10 วิ) ไม่ซ้ำกับ event path; ครบ 0 = expire ผ่าน pipeline เดิม (recovery + transform + webhook + สถิติ ทำงานครบ); ต้องเปิด `expire_check.enabled` (default เปิดอยู่แล้ว); creative skip ตามเดิม
+- ข้อจำกัด: `/ti pause` ใช้ได้เฉพาะไอเทมแบบวันที่ (expire) เหมือนเดิม — playtime/held หยุดเองตามเงื่อนไข
+- Unit tests: `TimeLoreTest` เพิ่ม case parse lore playtime/held (รวม 80 ชุด)
+
 ## [2.8.0] - 2026-10-26
 
 ### Added

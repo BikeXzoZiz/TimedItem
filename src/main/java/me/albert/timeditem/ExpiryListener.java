@@ -248,6 +248,22 @@ public final class ExpiryListener implements Listener {
             TimeLore.applyPaused(item, config, seconds + delta);
             return true;
         }
+        if (type == TimeLore.Type.PLAYTIME) {
+            long seconds = TimeLore.playtimeSeconds(item, config);
+            if (seconds <= 0) {
+                return false;
+            }
+            TimeLore.applyPlaytime(item, config, seconds + delta);
+            return true;
+        }
+        if (type == TimeLore.Type.HELD) {
+            long seconds = TimeLore.heldSeconds(item, config);
+            if (seconds <= 0) {
+                return false;
+            }
+            TimeLore.applyHeld(item, config, seconds + delta);
+            return true;
+        }
         return false;
     }
 
@@ -395,6 +411,61 @@ public final class ExpiryListener implements Listener {
             }
             warnIfNeeded(player, info, config, now);
         }
+    }
+
+    /**
+     * Counts the seconds-based timers down (2.9+): PLAYTIME items lose
+     * <interval> seconds per scan while the owner is online, HELD items
+     * only while in a hand or worn. Called once per periodic scan (never
+     * from click paths), so an item is decremented exactly once per
+     * interval; expiry goes through the shared pipeline.
+     */
+    public void tickCountdownTimers(Player player, PluginConfig config) {
+        PlayerInventory inv = player.getInventory();
+        ItemStack[] contents = inv.getContents();
+        int heldSlot = inv.getHeldItemSlot();
+        long delta = config.getExpireCheckSeconds();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack item = contents[i];
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+            TimeLore.TimerInfo info = TimeLore.analyze(item, config);
+            if (info == null) {
+                continue;
+            }
+            if (info.getType() == TimeLore.Type.HELD) {
+                // main hand (the selected hotbar slot), offhand (40) and armor (36-39)
+                if (!isHeldSlot(i, heldSlot)) {
+                    continue;
+                }
+            } else if (info.getType() != TimeLore.Type.PLAYTIME) {
+                continue;
+            }
+            long remaining = info.getSeconds();
+            if (remaining <= 0) {
+                continue;
+            }
+            final int slot = i;
+            boolean armor = i >= ARMOR_START && i <= ARMOR_END;
+            if (remaining - delta <= 0) {
+                expireNow(item, player, () -> inv.setItem(slot, null), armor, config);
+            } else {
+                if (info.getType() == TimeLore.Type.PLAYTIME) {
+                    TimeLore.applyPlaytime(item, config, remaining - delta);
+                } else {
+                    TimeLore.applyHeld(item, config, remaining - delta);
+                }
+                if (inv.getItem(slot) != null) {
+                    inv.setItem(slot, inv.getItem(slot)); // write back in case the stack was a copy
+                }
+            }
+        }
+    }
+
+    /** True when the inventory slot is a hand or armor slot (worn/wielded positions). */
+    private boolean isHeldSlot(int slot, int heldSlot) {
+        return slot == heldSlot || slot == 40 || (slot >= ARMOR_START && slot <= ARMOR_END);
     }
 
     /** Message + sound when an item crosses one of its warning stages. */

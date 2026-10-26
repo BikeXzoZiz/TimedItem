@@ -94,6 +94,12 @@ public final class TimedItemMenu implements Listener {
             lore.add(config.getGuiStatusTypePaused());
             lore.add(config.getGuiStatusRemaining()
                     .replace("{time}", TimeLore.formatDuration(Math.max(0L, info.getSeconds()), config)));
+        } else if (info.getType() == TimeLore.Type.PLAYTIME
+                || info.getType() == TimeLore.Type.HELD) {
+            lore.add(info.getType() == TimeLore.Type.PLAYTIME
+                    ? config.getGuiStatusTypePlaytime() : config.getGuiStatusTypeHeld());
+            lore.add(config.getGuiStatusRemaining()
+                    .replace("{time}", TimeLore.formatDuration(Math.max(0L, info.getSeconds()), config)));
         } else {
             lore.add(config.getGuiStatusTypeLifetime());
             lore.add(config.getGuiStatusDuration()

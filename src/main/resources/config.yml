@@ -1,9 +1,9 @@
-# TimedItem 2.8.0
+# TimedItem 2.9.0
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 # Messages live in lang/messages_<language>.yml (see Settings.language).
 
-config-version: 10
+config-version: 11
 
 Settings:
   # Language file to load messages from: lang/messages_en.yml,
@@ -104,6 +104,9 @@ Settings:
       custom_id: ""
       # When set, only tokens with this exact display name count.
       name: ""
+  # Countdown timer kinds (2.9+): /ti set playtime <time> counts down only
+  # while the owner is online; /ti set held <time> only while held/worn.
+  # Give forms: /ti give <player> playtime:<time> [amount] / held:<time>.
   # Administrative lookups (no player-facing effect):
   # /ti find <material|plugin:id|name> locates timed items in inventories,
   # containers and on the ground; /ti stats [days] shows expiry counts;
