@@ -26,12 +26,17 @@ public final class TimedItemPlugin extends JavaPlugin {
     private FoliaGroundExpiry foliaGroundExpiry;
     private HookManager hooks;
     private StorageWriter storageWriter;
+    private TrackedItems trackedItems;
+    private AdminMenu adminMenu;
+    private GroundHolograms holograms;
     private SchedulerCompat.Handle expiryTask;
     private SchedulerCompat.Handle actionbarTask;
+    private SchedulerCompat.Handle containerScanTask;
 
     @Override
     public void onEnable() {
         PdcCompat.init(this);
+        HologramCompat.init();
         config = new PluginConfig(this);
         config.load();
         DebugLog.install(getLogger());
@@ -39,10 +44,13 @@ public final class TimedItemPlugin extends JavaPlugin {
         // storage is created once and never re-created by /ti reload -
         // changing Settings.storage.type needs a restart by design
         storageWriter = new StorageWriter(StorageFactory.create(this), getLogger());
+        trackedItems = new TrackedItems();
         listener = new ExpiryListener(this);
         Bukkit.getPluginManager().registerEvents(listener, this);
         menu = new TimedItemMenu(this);
         Bukkit.getPluginManager().registerEvents(menu, this);
+        adminMenu = new AdminMenu(this);
+        Bukkit.getPluginManager().registerEvents(adminMenu, this);
         recoveryStore = new RecoveryStore(this, storageWriter);
         recoveryStore.load();
         expiryService = new ExpiryService(this);
@@ -54,6 +62,10 @@ public final class TimedItemPlugin extends JavaPlugin {
         }
         restoreMenu = new RestoreMenu(this);
         Bukkit.getPluginManager().registerEvents(restoreMenu, this);
+        // container scanning (open mode); periodic runs from startTasks
+        Bukkit.getPluginManager().registerEvents(new ContainerGuard(this), this);
+        holograms = new GroundHolograms(this);
+        holograms.start();
         PluginCommand command = getCommand("timeditem");
         if (command != null) {
             command.setExecutor(new TimedItemCommand(this));
@@ -117,6 +129,15 @@ public final class TimedItemPlugin extends JavaPlugin {
         return storageWriter;
     }
 
+    /** Timed items seen by the last periodic scan (admin overview). */
+    public TrackedItems trackedItems() {
+        return trackedItems;
+    }
+
+    public AdminMenu adminMenu() {
+        return adminMenu;
+    }
+
     /** Integrations with other item plugins (Hooks.* config section). */
     public HookManager hooks() {
         return hooks;
@@ -128,6 +149,11 @@ public final class TimedItemPlugin extends JavaPlugin {
         expiryTask = null;
         cancelTask(actionbarTask);
         actionbarTask = null;
+        cancelTask(containerScanTask);
+        containerScanTask = null;
+        if (holograms != null) {
+            holograms.stop();
+        }
         if (storageWriter != null) {
             storageWriter.close();
         }
@@ -155,6 +181,8 @@ public final class TimedItemPlugin extends JavaPlugin {
         expiryTask = null;
         cancelTask(actionbarTask);
         actionbarTask = null;
+        cancelTask(containerScanTask);
+        containerScanTask = null;
         if (config.isExpireCheckEnabled()) {
             long ticks = config.getExpireCheckSeconds() * 20L;
             expiryTask = SchedulerCompat.runGlobalTimer(this, ticks, ticks,
@@ -162,6 +190,14 @@ public final class TimedItemPlugin extends JavaPlugin {
         }
         if (config.isActionbarEnabled()) {
             actionbarTask = SchedulerCompat.runGlobalTimer(this, 20L, 20L, new ActionbarTask(this));
+        }
+        if (config.isContainerScanEnabled() && !SchedulerCompat.isFolia()) {
+            String mode = config.getContainerScanMode();
+            if (mode.equals("periodic") || mode.equals("both")) {
+                long ticks = config.getContainerScanSeconds() * 20L;
+                containerScanTask = SchedulerCompat.runGlobalTimer(this, ticks, ticks,
+                        new ContainerScanTask(this));
+            }
         }
         if (foliaGroundExpiry != null) {
             // restart so a changed interval applies to every tracking task

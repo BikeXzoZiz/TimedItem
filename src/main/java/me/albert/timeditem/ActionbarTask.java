@@ -68,6 +68,9 @@ public final class ActionbarTask implements Runnable {
         if (remaining < 0) {
             return;
         }
+        if (config.isLiveLoreEnabled()) {
+            TimeLore.updateLiveDisplay(item, config, info, remaining);
+        }
         String text = PluginConfig.color(config.getActionbarFormat()
                 .replace("{time}", TimeLore.formatDuration(remaining, config)));
         try {

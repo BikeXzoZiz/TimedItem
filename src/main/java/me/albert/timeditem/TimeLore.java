@@ -240,6 +240,46 @@ public final class TimeLore {
         write(item, config, null, -1L);
     }
 
+    /**
+     * Live lore countdown (3.0+): rewrites the timer lore line so its
+     * label shows the live remaining time instead of the static value.
+     * Only safe on 1.14+ servers (the PDC is the storage of record
+     * there; on 1.13 the lore line IS the timer and must stay canonical).
+     * The line stays parser-compatible (prefix + delimiter + seconds),
+     * so the next canonical write replaces it cleanly.
+     */
+    public static void updateLiveDisplay(ItemStack item, PluginConfig config,
+                                         TimerInfo info, long remaining) {
+        if (!PdcCompat.isAvailable() || remaining < 0) {
+            return;
+        }
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+        String prefix = prefixOf(info.getType(), config);
+        String label = config.getLiveLoreFormat().replace("{time}", formatDuration(remaining, config));
+        String line = prefix + DELIMITER + (info.getType() == Type.EXPIRE
+                ? Math.max(0L, remaining) : info.getSeconds()) + DELIMITER + label;
+        List<String> lore = new ArrayList<String>();
+        boolean replaced = false;
+        if (meta.hasLore() && meta.getLore() != null) {
+            for (String entry : meta.getLore()) {
+                if (!replaced && isTimerLine(entry, config)) {
+                    lore.add(line);
+                    replaced = true;
+                } else {
+                    lore.add(entry);
+                }
+            }
+        }
+        if (!replaced) {
+            lore.add(line);
+        }
+        meta.setLore(lore);
+        item.setItemMeta(meta);
+    }
+
     /** True when the item's material is on the blacklist (Settings.blacklist.materials). */
     public static boolean isBlacklisted(ItemStack item, PluginConfig config) {
         return item != null && config.blacklistedMaterials().contains(item.getType());

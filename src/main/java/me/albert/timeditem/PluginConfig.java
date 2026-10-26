@@ -90,6 +90,35 @@ public final class PluginConfig {
     private String discordWebhookEmbedTitle;
     private int discordWebhookEmbedColor;
 
+    private List<VisualStages.Stage> visualStages;
+    private boolean hologramEnabled;
+    private String hologramFormat;
+    private double hologramHeight;
+    private boolean liveLoreEnabled;
+    private String liveLoreFormat;
+    private boolean containerScanEnabled;
+    private String containerScanMode;
+    private int containerScanSeconds;
+    private boolean antiHideEnabled;
+    private long antiHideBelowSeconds;
+
+    private String guiAdminTitle;
+    private String guiAdminOwner;
+    private String guiAdminType;
+    private String guiAdminExpireNow;
+    private String guiAdminRemoveTimer;
+    private String guiAdminEmpty;
+    private String guiAdminPrev;
+    private String guiAdminNext;
+    private String guiAdminExpired;
+    private String guiAdminRemoved;
+    private String antiHideBlocked;
+    private String checkUsage;
+    private String checkOffline;
+    private String checkHeader;
+    private String checkLine;
+    private String checkEmpty;
+
     private String expiresAtPrefix;
     private String usefulLifePrefix;
     private String pausedPrefix;
@@ -188,7 +217,7 @@ public final class PluginConfig {
     public void load() {
         plugin.saveDefaultConfig();
         FileConfiguration raw = plugin.getConfig();
-        raw.addDefault("config-version", 11);
+        raw.addDefault("config-version", 12);
         raw.addDefault("Settings.language", "en");
         raw.addDefault("Settings.start_date_calculate_on_click", true);
         raw.addDefault("Settings.reset_player_health_if_armor", true);
@@ -249,6 +278,17 @@ public final class PluginConfig {
         raw.addDefault("Settings.discord_webhook.use_embed", false);
         raw.addDefault("Settings.discord_webhook.embed_title", "TimedItem");
         raw.addDefault("Settings.discord_webhook.embed_color", "ff5555");
+        raw.addDefault("Settings.visual_stages", new java.util.ArrayList<String>());
+        raw.addDefault("Settings.hologram.enabled", false);
+        raw.addDefault("Settings.hologram.format", "&e⌛ {time}");
+        raw.addDefault("Settings.hologram.height", 0.5);
+        raw.addDefault("Settings.live_lore.enabled", false);
+        raw.addDefault("Settings.live_lore.format", "&e⌛ {time}");
+        raw.addDefault("Settings.container_scan.enabled", false);
+        raw.addDefault("Settings.container_scan.mode", "open");
+        raw.addDefault("Settings.container_scan.interval_seconds", 60);
+        raw.addDefault("Settings.anti_hide.enabled", false);
+        raw.addDefault("Settings.anti_hide.block_below_seconds", 60);
         raw.addDefault("Settings.blacklist.materials", new java.util.ArrayList<String>());
         raw.addDefault("Hooks.mmoitems", true);
         raw.addDefault("Hooks.itemsadder", true);
@@ -434,6 +474,22 @@ public final class PluginConfig {
         renewalTokenMissing = color(lang.getString("Messages.renewal_token_missing"));
         restoreReminder = color(lang.getString("Messages.restore_reminder"));
         transformUnknown = color(lang.getString("Messages.transform_unknown"));
+        antiHideBlocked = color(lang.getString("Messages.anti_hide_blocked"));
+        checkUsage = color(lang.getString("Messages.check_usage"));
+        checkOffline = color(lang.getString("Messages.check_offline"));
+        checkHeader = color(lang.getString("Messages.check_header"));
+        checkLine = color(lang.getString("Messages.check_line"));
+        checkEmpty = color(lang.getString("Messages.check_empty"));
+        guiAdminTitle = color(lang.getString("Gui.admin_title"));
+        guiAdminOwner = color(lang.getString("Gui.admin_owner"));
+        guiAdminType = color(lang.getString("Gui.admin_type"));
+        guiAdminExpireNow = color(lang.getString("Gui.admin_expire_now"));
+        guiAdminRemoveTimer = color(lang.getString("Gui.admin_remove_timer"));
+        guiAdminEmpty = color(lang.getString("Gui.admin_empty"));
+        guiAdminPrev = color(lang.getString("Gui.admin_prev"));
+        guiAdminNext = color(lang.getString("Gui.admin_next"));
+        guiAdminExpired = color(lang.getString("Messages.admin_expired"));
+        guiAdminRemoved = color(lang.getString("Messages.admin_removed"));
 
         expiresAtPrefix = color(lang.getString("DateFormat.expires_at"));
         usefulLifePrefix = color(lang.getString("DateFormat.useful_life"));
@@ -497,6 +553,30 @@ public final class PluginConfig {
         discordWebhookEmbedTitle = embedTitle == null ? "TimedItem" : embedTitle;
         discordWebhookEmbedColor = parseHexColor(
                 raw.getString("Settings.discord_webhook.embed_color", "ff5555"));
+
+        // Visual decay stages (3.0+)
+        visualStages = java.util.Collections.unmodifiableList(
+                VisualStages.parse(raw.getMapList("Settings.visual_stages")));
+
+        // Hologram countdown above dropped timed items
+        hologramEnabled = raw.getBoolean("Settings.hologram.enabled", false);
+        String holoFormat = raw.getString("Settings.hologram.format", "&e⌛ {time}");
+        hologramFormat = holoFormat == null ? "&e⌛ {time}" : holoFormat;
+        hologramHeight = raw.getDouble("Settings.hologram.height", 0.5);
+
+        // Live lore countdown while holding the item
+        liveLoreEnabled = raw.getBoolean("Settings.live_lore.enabled", false);
+        String loreFormat = raw.getString("Settings.live_lore.format", "&e⌛ {time}");
+        liveLoreFormat = loreFormat == null ? "&e⌛ {time}" : loreFormat;
+
+        // Container scanning + anti-hide
+        containerScanEnabled = raw.getBoolean("Settings.container_scan.enabled", false);
+        String scanMode = raw.getString("Settings.container_scan.mode", "open");
+        containerScanMode = scanMode == null ? "open"
+                : scanMode.trim().toLowerCase(Locale.ROOT);
+        containerScanSeconds = Math.max(5, raw.getInt("Settings.container_scan.interval_seconds", 60));
+        antiHideEnabled = raw.getBoolean("Settings.anti_hide.enabled", false);
+        antiHideBelowSeconds = Math.max(1, raw.getInt("Settings.anti_hide.block_below_seconds", 60));
     }
 
     /** Hex (or decimal) string to an RGB int, defaulting to the fallback. */
@@ -725,6 +805,115 @@ public final class PluginConfig {
 
     public String getTransformUnknown() {
         return transformUnknown;
+    }
+    public String getAntiHideBlocked() {
+        return antiHideBlocked;
+    }
+
+    public String getCheckUsage() {
+        return checkUsage;
+    }
+
+    public String getCheckOffline() {
+        return checkOffline;
+    }
+
+    public String getCheckHeader() {
+        return checkHeader;
+    }
+
+    public String getCheckLine() {
+        return checkLine;
+    }
+
+    public String getCheckEmpty() {
+        return checkEmpty;
+    }
+
+    public String getGuiAdminTitle() {
+        return guiAdminTitle;
+    }
+
+    public String getGuiAdminOwner() {
+        return guiAdminOwner;
+    }
+
+    public String getGuiAdminType() {
+        return guiAdminType;
+    }
+
+    public String getGuiAdminExpireNow() {
+        return guiAdminExpireNow;
+    }
+
+    public String getGuiAdminRemoveTimer() {
+        return guiAdminRemoveTimer;
+    }
+
+    public String getGuiAdminEmpty() {
+        return guiAdminEmpty;
+    }
+
+    public String getGuiAdminPrev() {
+        return guiAdminPrev;
+    }
+
+    public String getGuiAdminNext() {
+        return guiAdminNext;
+    }
+
+    public String getGuiAdminExpired() {
+        return guiAdminExpired;
+    }
+
+    public String getGuiAdminRemoved() {
+        return guiAdminRemoved;
+    }
+
+    /** Parsed visual decay stages (Settings.visual_stages), most severe last index. */
+    public List<VisualStages.Stage> visualStages() {
+        return visualStages;
+    }
+
+    public boolean isHologramEnabled() {
+        return hologramEnabled;
+    }
+
+    public String getHologramFormat() {
+        return hologramFormat;
+    }
+
+    public double getHologramHeight() {
+        return hologramHeight;
+    }
+
+    public boolean isLiveLoreEnabled() {
+        return liveLoreEnabled;
+    }
+
+    public String getLiveLoreFormat() {
+        return liveLoreFormat;
+    }
+
+    public boolean isContainerScanEnabled() {
+        return containerScanEnabled;
+    }
+
+    /** open, periodic or both. */
+    public String getContainerScanMode() {
+        return containerScanMode;
+    }
+
+    public int getContainerScanSeconds() {
+        return containerScanSeconds;
+    }
+
+    public boolean isAntiHideEnabled() {
+        return antiHideEnabled;
+    }
+
+    public long getAntiHideBelowSeconds() {
+        return antiHideBelowSeconds;
     }
 
     /** True when expiry transformation is enabled (Settings.expiry_transform). */
@@ -1261,6 +1450,23 @@ public final class PluginConfig {
                 "&eYou have &6{count} &eexpired item(s) waiting for restore. &7(/ti restore)");
         lang.addDefault("Messages.transform_unknown",
                 "&cUnknown transform profile: &e{id}&c. Define it under Settings.transforms.");
+        lang.addDefault("Messages.anti_hide_blocked",
+                "&cThis item expires in &e{time} &c- it can no longer be stored in containers!");
+        lang.addDefault("Messages.check_usage", "&7Usage: /ti check <player>");
+        lang.addDefault("Messages.check_offline", "&cPlayer &e{player} &cmust be online for a check.");
+        lang.addDefault("Messages.check_header", "&6Timed items of &e{player}&6:");
+        lang.addDefault("Messages.check_line", " &8- &7slot &e{slot}&7: &e{item} &7({type}, &e{time}&7)");
+        lang.addDefault("Messages.check_empty", "&7{player} carries no timed items.");
+        lang.addDefault("Gui.admin_title", "&8TimedItem Admin &7({page}/{pages})");
+        lang.addDefault("Gui.admin_owner", "&7Owner: &e{player}");
+        lang.addDefault("Gui.admin_type", "&7Timer: &e{type} &7- &e{time}");
+        lang.addDefault("Gui.admin_expire_now", "&aLeft-click: &7expire now");
+        lang.addDefault("Gui.admin_remove_timer", "&cRight-click: &7remove timer");
+        lang.addDefault("Gui.admin_empty", "&7No timed items seen by the last scan");
+        lang.addDefault("Gui.admin_prev", "&ePrevious page");
+        lang.addDefault("Gui.admin_next", "&eNext page");
+        lang.addDefault("Messages.admin_expired", "&aExpired the item of &e{player}&a.");
+        lang.addDefault("Messages.admin_removed", "&aRemoved the timer of &e{player}&a's item.");
         lang.addDefault("DateFormat.expires_at", "&cExpires: ");
         lang.addDefault("DateFormat.useful_life", "&7Lifetime: ");
         lang.addDefault("DateFormat.paused", "&7Paused: ");

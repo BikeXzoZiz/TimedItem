@@ -402,6 +402,8 @@ public final class ExpiryListener implements Listener {
             if (info == null) {
                 continue;
             }
+            recordTracked(player, i, item, info, config);
+            VisualStages.apply(plugin, item, info, config);
             final int slot = i;
             boolean armor = i >= ARMOR_START && i <= ARMOR_END;
             boolean changed = handleInfo(info, item, player, allowStart,
@@ -411,6 +413,23 @@ public final class ExpiryListener implements Listener {
             }
             warnIfNeeded(player, info, config, now);
         }
+    }
+
+    /** Feeds the /ti admin overview (one entry per item per scan cycle). */
+    private void recordTracked(Player player, int slot, ItemStack item,
+                               TimeLore.TimerInfo info, PluginConfig config) {
+        String custom = plugin.hooks() == null ? null : plugin.hooks().itemId(item);
+        String material = item.getType().name();
+        long remaining;
+        if (info.getType() == TimeLore.Type.EXPIRE && info.getExpiry() != null) {
+            remaining = Math.max(0L,
+                    Duration.between(LocalDateTime.now(), info.getExpiry()).getSeconds());
+        } else {
+            remaining = Math.max(0L, info.getSeconds());
+        }
+        plugin.trackedItems().record(player, slot, material,
+                custom == null ? material : custom,
+                info.getType().name().toLowerCase(java.util.Locale.ROOT), remaining);
     }
 
     /**

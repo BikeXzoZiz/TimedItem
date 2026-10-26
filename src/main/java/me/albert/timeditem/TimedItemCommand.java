@@ -150,6 +150,29 @@ public final class TimedItemCommand implements CommandExecutor {
             handleAudit(sender, args, config);
             return true;
         }
+        if (sub.equals("admin")) {
+            Player player = requirePlayer(sender, config);
+            if (player != null) {
+                int page = 0;
+                String filter = "";
+                if (args.length >= 2) {
+                    try {
+                        page = Integer.parseInt(args[1]) - 1;
+                    } catch (NumberFormatException e) {
+                        filter = args[1];
+                    }
+                }
+                if (args.length >= 3) {
+                    filter = args[2];
+                }
+                plugin.adminMenu().open(player, page, filter);
+            }
+            return true;
+        }
+        if (sub.equals("check")) {
+            handleCheck(sender, args, config);
+            return true;
+        }
         sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
         return true;
     }
@@ -860,9 +883,59 @@ public final class TimedItemCommand implements CommandExecutor {
         });
     }
 
+    /**
+     * /ti check <player> - lists every timed item the target carries
+     * (slot, item, timer kind, remaining). Online players only: reading
+     * an offline player's inventory is deliberately not supported.
+     */
+    private void handleCheck(CommandSender sender, String[] args, PluginConfig config) {
+        if (args.length < 2) {
+            sender.sendMessage(config.getPrefix() + config.getCheckUsage());
+            return;
+        }
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) {
+            sender.sendMessage(config.getPrefix()
+                    + config.getCheckOffline().replace("{player}", args[1]));
+            return;
+        }
+        sender.sendMessage(config.getPrefix() + config.getCheckHeader()
+                .replace("{player}", target.getName()));
+        PluginConfig cfg = config;
+        ItemStack[] contents = target.getInventory().getContents();
+        int found = 0;
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack item = contents[slot];
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+            TimeLore.TimerInfo info = TimeLore.analyze(item, cfg);
+            if (info == null) {
+                continue;
+            }
+            found++;
+            long remaining;
+            if (info.getType() == TimeLore.Type.EXPIRE && info.getExpiry() != null) {
+                remaining = Math.max(0L, Duration.between(LocalDateTime.now(), info.getExpiry()).getSeconds());
+            } else {
+                remaining = Math.max(0L, info.getSeconds());
+            }
+            String custom = plugin.hooks() == null ? null : plugin.hooks().itemId(item);
+            String itemDesc = custom == null ? item.getType().name() : custom;
+            sender.sendMessage(config.getPrefix() + config.getCheckLine()
+                    .replace("{slot}", String.valueOf(slot))
+                    .replace("{item}", itemDesc)
+                    .replace("{type}", info.getType().name().toLowerCase(Locale.ROOT))
+                    .replace("{time}", TimeLore.formatDuration(remaining, cfg)));
+        }
+        if (found == 0) {
+            sender.sendMessage(config.getPrefix()
+                    + config.getCheckEmpty().replace("{player}", target.getName()));
+        }
+    }
+
     /** /ti audit [page] - recent timer actions from the audit log (async query). */
-    private void handleAudit(CommandSender sender, String[] args, PluginConfig config) {
-        int page = 0;
+    private void handleAudit(CommandSender sender, String[] args, PluginConfig config) {        int page = 0;
         if (args.length >= 2) {
             try {
                 page = Math.max(0, Integer.parseInt(args[1]) - 1);

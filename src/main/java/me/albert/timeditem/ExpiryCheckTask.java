@@ -45,6 +45,7 @@ public final class ExpiryCheckTask implements Runnable {
 
     private void runCheck() {
         PluginConfig config = plugin.pluginConfig();
+        plugin.trackedItems().beginCycle(); // fresh snapshot for /ti admin
         if (SchedulerCompat.isFolia()) {
             // Touching inventories is only legal on the owning region, so
             // enqueue one entity-scheduler run per player. Ground items are

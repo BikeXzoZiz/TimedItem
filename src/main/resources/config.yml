@@ -1,9 +1,9 @@
-# TimedItem 2.9.0
+# TimedItem 3.0.0
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 # Messages live in lang/messages_<language>.yml (see Settings.language).
 
-config-version: 11
+config-version: 12
 
 Settings:
   # Language file to load messages from: lang/messages_en.yml,
@@ -107,6 +107,46 @@ Settings:
   # Countdown timer kinds (2.9+): /ti set playtime <time> counts down only
   # while the owner is online; /ti set held <time> only while held/worn.
   # Give forms: /ti give <player> playtime:<time> [amount] / held:<time>.
+  visual_stages:
+    # Visual decay (3.0+): when the remaining time drops below a
+    # threshold, the item's name gets a color and/or an enchant glint.
+    # Vanilla items are recolored, custom items only glow. Order does
+    # not matter; list them most severe last for readability. Empty = off.
+    #  - at_seconds: 3600
+    #    name_color: "&6"
+    #    glow: true
+    #  - at_seconds: 300
+    #    name_color: "&c"
+    #    glow: true
+    []
+  hologram:
+    # Floating countdown above dropped timed items (3.0+). Needs 1.19.4+
+    # (silently off on older servers) and is not available on Folia.
+    enabled: false
+    format: "&e⌛ {time}"
+    height: 0.5
+  live_lore:
+    # Rewrite the timer lore line of the held item every second so it
+    # shows a live countdown (3.0+). Needs 1.14+; slightly more item
+    # writes than the actionbar alone, so it is off by default.
+    enabled: false
+    format: "&e⌛ {time}"
+  container_scan:
+    # Scan containers for expired items (3.0+):
+    # "open"     = check a container's contents when a player opens it
+    #              (cheap, works everywhere including Folia)
+    # "periodic" = walk every loaded chunk's containers on a timer
+    #              (thorough, classic servers only, heavier)
+    # "both"     = both of the above
+    enabled: false
+    mode: "open"
+    interval_seconds: 60
+  anti_hide:
+    # With container scanning on, players could park items about to
+    # expire inside chests nobody opens. This blocks moving items with
+    # less than <block_below_seconds> left into containers (3.0+).
+    enabled: false
+    block_below_seconds: 60
   # Administrative lookups (no player-facing effect):
   # /ti find <material|plugin:id|name> locates timed items in inventories,
   # containers and on the ground; /ti stats [days] shows expiry counts;

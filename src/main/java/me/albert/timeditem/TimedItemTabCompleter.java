@@ -22,7 +22,7 @@ public final class TimedItemTabCompleter implements TabCompleter {
 
     private static final List<String> SUBS = Arrays.asList(
             "set", "add", "give", "pause", "resume", "remove", "info", "menu", "restore",
-            "find", "stats", "audit", "debug", "reload");
+            "find", "stats", "audit", "admin", "check", "debug", "reload");
     private static final List<String> TIME_HINTS =
             Arrays.asList("60s", "5m", "30m", "1h", "6h", "1d", "1d12h", "7d", "30d");
     private static final List<String> COUNTDOWN_HINTS = Arrays.asList("playtime", "held");
@@ -95,6 +95,23 @@ public final class TimedItemTabCompleter implements TabCompleter {
         } else if (sub.equals("audit")) {
             if (args.length == 2) {
                 filter(Arrays.asList("1", "2", "3"), args[1], out);
+            }
+        } else if (sub.equals("admin")) {
+            if (args.length == 2) {
+                filter(Arrays.asList("1", "2", "3"), args[1], out);
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (player.getName().toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                        out.add(player.getName());
+                    }
+                }
+            }
+        } else if (sub.equals("check")) {
+            if (args.length == 2) {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (player.getName().toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                        out.add(player.getName());
+                    }
+                }
             }
         }
         return out;

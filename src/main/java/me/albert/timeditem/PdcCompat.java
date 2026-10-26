@@ -168,6 +168,66 @@ public final class PdcCompat {
         }
     }
 
+    /** Generic string key under the timeditem namespace (visual stages etc.). */
+    public static void writeString(ItemStack item, String key, String value) {
+        if (!available) {
+            return;
+        }
+        try {
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) {
+                return;
+            }
+            Object container = getPdcMethod.invoke(meta);
+            setMethod.invoke(container, customKey(key), stringType, value);
+            item.setItemMeta(meta);
+        } catch (Throwable ignored) {
+            DebugLog.verbose("PDC string write failed: " + ignored);
+        }
+    }
+
+    /** Reads a generic string key, or null. */
+    public static String readString(ItemStack item, String key) {
+        if (!available) {
+            return null;
+        }
+        try {
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) {
+                return null;
+            }
+            Object container = getPdcMethod.invoke(meta);
+            return (String) getMethod.invoke(container, customKey(key), stringType);
+        } catch (Throwable t) {
+            DebugLog.verbose("PDC string read failed: " + t);
+            return null;
+        }
+    }
+
+    /** Removes a generic string key. */
+    public static void removeString(ItemStack item, String key) {
+        if (!available) {
+            return;
+        }
+        try {
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) {
+                return;
+            }
+            Object container = getPdcMethod.invoke(meta);
+            removeMethod.invoke(container, customKey(key));
+            item.setItemMeta(meta);
+        } catch (Throwable ignored) {
+            DebugLog.verbose("PDC string remove failed: " + ignored);
+        }
+    }
+
+    private static NamespacedKey customKey(String key) {
+        // created per call only for the rare visual-stage keys; the hot
+        // path keys (type/value/uid/transform) have their own fields
+        return new NamespacedKey("timeditem", key);
+    }
+
     public static void clear(ItemStack item) {
         if (!available) {
             return;
@@ -185,6 +245,9 @@ public final class PdcCompat {
             item.setItemMeta(meta);
         } catch (Throwable ignored) {
             DebugLog.verbose("PDC clear failed: " + ignored);
+            return;
         }
+        removeString(item, "stage");
+        removeString(item, "visname");
     }
 }

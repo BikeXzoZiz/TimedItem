@@ -2,6 +2,25 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [3.0.0] - 2026-10-27
+
+### Added
+- **Visual decay stages** (`Settings.visual_stages`) — ไอเทมใกล้หมดอายุ "เน่าเปื่อย" ให้เห็น: เวลาที่เหลือต่ำกว่าเกณฑ์ → ชื่อไอเทมเปลี่ยนสี และ/หรือ มี enchant glint (ของ vanilla เปลี่ยนสีชื่อ, ของ custom จาก integration ใช้แค่ glow กันทับชื่อของปลั๊กอินต้นทาง); กลับสี/เอา glow ออกเองเมื่อต่อเวลา; เก็บสถานะ stage ใน NBT จึงเขียนไอเทมเฉพาะตอน stage เปลี่ยนจริง
+- **Hologram countdown** (`Settings.hologram`) — ตัวเลขนับถอยหลังลอยเหนือไอเทมที่ตกพื้น (TextDisplay, 1.19.4+) หายเมื่อถูกหยิบ/despawn/หมดอายุ — ปิดบน Folia (ข้อจำกัด threading) และเซิร์ฟเก่ากว่า 1.19.4
+- **Live lore countdown** (`Settings.live_lore`) — บรรทัด lore ของไอเทมที่ถืออัปเดตเวลาที่เหลือสดทุกวินาที (1.14+)
+- **Admin GUI** (`/ti admin [หน้า] [filter]`) — ภาพรวมไอเทมจับเวลาทั้งเซิร์ฟจากการสแกนล่าสุด: เจ้าของ, ประเภท, เวลาที่เหลือ, item id — คลิกซ้าย = ทำให้หมดอายุทันที, คลิกขวา = ลบตัวจับเวลา (action รันบน region thread ของเจ้าของ ปลอดภัยบน Folia)
+- **`/ti check <ผู้เล่น>`** — รายการไอเทมจับเวลาทั้งหมดที่ผู้เล่นถือ (ช่อง, ชนิด, ประเภท timer, เวลาที่เหลือ) — ผู้เล่นออนไลน์เท่านั้น (อ่าน inventory ออฟไลน์ไม่รองรับโดยการออกแบบ)
+- **Container Scanning** (`Settings.container_scan`) — ตรวจไอเทมหมดอายุในตู้เก็บของ: `open` = ตรวจตอนผู้เล่นเปิดตู้ (เบา, ใช้ได้ทุกเซิร์ฟรวม Folia) · `periodic` = เดินตรวจตู้ทุก chunk ที่โหลดตามรอบ (ครอบคลุมตู้ที่ไม่มีใครเปิด, เฉพาะ non-Folia) · `both`
+- **Anti-hide** (`Settings.anti_hide`) — กันของใกล้หมดอายุถูก "ยัดทิ้ง" ในตู้ที่ไม่มีใครเปิด: ย้ายของที่เหลือน้อยกว่า `block_below_seconds` ลงตู้ไม่ได้ (ครอบคลุม cursor place + shift-click) — คู่หูที่จำเป็นของ container scan
+- Tab completion ใหม่สำหรับ admin/check
+
+### Technical
+- `TrackedItems` — snapshot หน่วยความจำของไอเทมที่การสแกนแต่ละรอบเห็น (feed `/ti admin`); เคลียร์-เติมใหม่ทุกรอบ ใช้หน่วยความจำคงที่
+- `HologramCompat` — spawn/update TextDisplay แบบ reflection ตามแพทเทิร์น compat อื่นๆ (คอมไพล์กับ 1.13 แต่รันได้ถึง 26.x, เซิร์ฟเก่า = ฟีเจอร์ปิดเอง)
+- `VisualStages.apply` ผูกเข้ากับรอบ scan เดิม — เขียน display name/เอนแชนต์เฉพาะเมื่อ stage เปลี่ยน (จำ original name ไว้ใน PDC เพื่อ restore); `PdcCompat` เพิ่ม generic string key API (`timeditem:stage`, `timeditem:visname`)
+- Live lore เขียน lore line ให้ยัง parse ได้ (prefix + วินาที) และ require PDC (1.13 ที่ lore เป็นที่เก็บจริงจะไม่เปิดฟีเจอร์นี้)
+- Unit tests 80 ชุดผ่าน · smoke test บน Paper 1.21: boot สะอาดทั้ง default และเปิดฟีเจอร์ Phase D ครบทุกตัว
+
 ## [2.9.0] - 2026-10-26
 
 ### Added
