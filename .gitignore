@@ -16,3 +16,7 @@ testing/real-hooks/
 testing/fakehooks/out/
 testing/fakehooks/build/
 testing/harness/target/
+
+# local-only helper scripts (machine-specific paths); sync-readme.py stays tracked
+scripts/*
+!scripts/sync-readme.py
