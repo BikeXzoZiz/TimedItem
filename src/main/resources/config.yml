@@ -1,9 +1,9 @@
-# TimedItem 3.0.0
+# TimedItem 3.1.0
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 # Messages live in lang/messages_<language>.yml (see Settings.language).
 
-config-version: 12
+config-version: 13
 
 Settings:
   # Language file to load messages from: lang/messages_en.yml,
@@ -177,6 +177,17 @@ Settings:
     max_items: 500
     # Entries older than this many days are pruned on startup.
     keep_days: 7
+    # Network restore (3.1+): with a shared mysql/mongodb backend,
+    # /ti restore reads one player's expired items from EVERY server of
+    # the network instead of local memory. Needs a restart after changing.
+    network: false
+  return_to_owner:
+    # Auto-return (3.1+): /ti give stamps the sender as owner - when the
+    # item expires it goes straight back to them (if online) instead of
+    # the recovery log. A transformation profile, when set, wins.
+    enabled: false
+    # Strip the timer before returning, so the item can be rented again.
+    remove_timer_on_return: true
   storage:
     # Where recovery entries, the audit log and the expiry statistics
     # live: "flat" (plugins/TimedItem/ files, default), "sqlite",
@@ -226,3 +237,8 @@ Settings:
     # /ti give or the menu. Items already carrying a timer are unaffected.
     # Example: [TOTEM_OF_UNDYING, NETHERITE_CHESTPLATE]
     materials: []
+
+# Hooks (self-healing): every integration can be disabled with
+# Hooks.<id>: false. 3.1+ adds QuickShop, zAuctionHouse and
+# CrazyAuctions - when installed, their sell/list events are cancelled
+# for timed items (set the hook to false to allow selling there).

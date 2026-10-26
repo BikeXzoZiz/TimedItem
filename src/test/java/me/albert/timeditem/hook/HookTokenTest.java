@@ -34,4 +34,26 @@ class HookTokenTest {
         assertNull(HookManager.parseToken(":item"));
         assertNull(HookManager.parseToken("mmoitems:"));
     }
+
+    @Test
+    void lowercasesThePrefixAndKeepsEveryIdPart() {
+        assertArrayEquals(new String[] {"mmoitems", "SWORD", "CUTLASS"},
+                HookManager.parseToken("MMOITEMS:SWORD:CUTLASS"));
+        assertArrayEquals(new String[] {"oraxen", "a", "b", "c", "d"},
+                HookManager.parseToken("oraxen:a:b:c:d"));
+    }
+
+    @Test
+    void rejectsLeadingColonTokens() {
+        assertNull(HookManager.parseToken(":"));
+        assertNull(HookManager.parseToken("::x"));
+    }
+
+    @Test
+    void acceptsAliasesAndNumericPrefixes() {
+        assertArrayEquals(new String[] {"cc", "crate1", "PRIZE"},
+                HookManager.parseToken("CC:crate1:PRIZE"));
+        assertArrayEquals(new String[] {"9", "name"},
+                HookManager.parseToken("9:name")); // grammar is prefix-agnostic
+    }
 }

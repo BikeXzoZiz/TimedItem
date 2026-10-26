@@ -112,6 +112,46 @@ public abstract class SqlStorage implements Storage {
         }
     }
 
+    @Override
+    public List<RecoveryRecord> loadRecoveryFor(String playerUuid, int limit) {
+        List<RecoveryRecord> out = new ArrayList<RecoveryRecord>();
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement select = connection.prepareStatement(
+                     "SELECT id, time_millis, player_uuid, player_name, world, format, data"
+                             + " FROM timeditem_recovery WHERE player_uuid = ?"
+                             + " ORDER BY time_millis DESC LIMIT ?")) {
+            select.setString(1, playerUuid);
+            select.setInt(2, limit);
+            try (ResultSet result = select.executeQuery()) {
+                while (result.next()) {
+                    out.add(new RecoveryRecord(result.getString(1), result.getLong(2),
+                            result.getString(3), result.getString(4), result.getString(5),
+                            result.getString(6), result.getString(7)));
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Recovery query for player failed: " + e.getMessage());
+        }
+        return out;
+    }
+
+    @Override
+    public int countRecoveryFor(String playerUuid) {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement select = connection.prepareStatement(
+                     "SELECT COUNT(*) FROM timeditem_recovery WHERE player_uuid = ?")) {
+            select.setString(1, playerUuid);
+            try (ResultSet result = select.executeQuery()) {
+                if (result.next()) {
+                    return result.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Recovery count for player failed: " + e.getMessage());
+        }
+        return 0;
+    }
+
     private void deleteRecovery(Connection connection, String id) throws SQLException {
         try (PreparedStatement delete = connection.prepareStatement(
                 "DELETE FROM timeditem_recovery WHERE id = ?")) {

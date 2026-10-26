@@ -64,6 +64,10 @@ Messages:
   check_empty: "&7{player} carries no timed items."
   admin_expired: "&aExpired the item of &e{player}&a."
   admin_removed: "&aRemoved the timer of &e{player}&a's item."
+  info_owner: "&7Owner: &e{player}"
+  returned_to_owner: "&aYour rented item expired and was returned to you."
+  sell_blocked: "&cTimed items cannot be sold or listed! &7(expires in &e{time}&7)"
+  restore_network_title: "&8Expired items (all servers) &7({page}/{pages})"
 
 DateFormat:
   # Lore prefixes shown on timed items. Changing these after items with

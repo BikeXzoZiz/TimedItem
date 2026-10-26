@@ -68,6 +68,9 @@ public final class ContainerGuard implements Listener {
             TimeLore.TimerInfo info = TimeLore.analyze(item, config);
             if (info == null || info.getType() != TimeLore.Type.EXPIRE
                     || info.getExpiry() == null || !info.getExpiry().isBefore(now)) {
+                // the item itself may not be due, but its shulker contents can be
+                plugin.expiryService().expireInsideShulker(item, player,
+                        player.getLocation(), player.getWorld(), config);
                 continue;
             }
             final int index = slot;
@@ -126,6 +129,11 @@ public final class ContainerGuard implements Listener {
     private boolean isBelowThreshold(ItemStack item, PluginConfig config, long threshold) {
         if (item == null || item.getType() == Material.AIR) {
             return false;
+        }
+        // a shulker whose contents hold an about-to-expire item counts too,
+        // otherwise the anti-hide block is bypassed by parking items inside one
+        if (Shulkers.containsBelowThreshold(item, config, threshold)) {
+            return true;
         }
         TimeLore.TimerInfo info = TimeLore.analyze(item, config);
         if (info == null || info.getType() != TimeLore.Type.EXPIRE || info.getExpiry() == null) {

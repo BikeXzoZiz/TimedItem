@@ -97,6 +97,30 @@ public final class FlatFileStorage implements Storage {
         }
     }
 
+    @Override
+    public synchronized List<RecoveryRecord> loadRecoveryFor(String playerUuid, int limit) {
+        // flat storage is local-only: this mirrors the local list
+        List<RecoveryRecord> out = new ArrayList<RecoveryRecord>();
+        for (int i = records.size() - 1; i >= 0 && out.size() < limit; i--) {
+            RecoveryRecord record = records.get(i);
+            if (playerUuid.equals(record.getPlayerUuid())) {
+                out.add(record);
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public synchronized int countRecoveryFor(String playerUuid) {
+        int count = 0;
+        for (RecoveryRecord record : records) {
+            if (playerUuid.equals(record.getPlayerUuid())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private boolean deleteById(String id) {
         boolean changed = false;
         for (int i = records.size() - 1; i >= 0; i--) {

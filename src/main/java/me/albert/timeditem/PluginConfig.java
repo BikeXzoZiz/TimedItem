@@ -101,6 +101,9 @@ public final class PluginConfig {
     private int containerScanSeconds;
     private boolean antiHideEnabled;
     private long antiHideBelowSeconds;
+    private boolean returnToOwnerEnabled;
+    private boolean removeTimerOnReturn;
+    private boolean restoreNetworkEnabled;
 
     private String guiAdminTitle;
     private String guiAdminOwner;
@@ -113,6 +116,11 @@ public final class PluginConfig {
     private String guiAdminExpired;
     private String guiAdminRemoved;
     private String antiHideBlocked;
+    private String infoOwner;
+    private String returnedToOwner;
+    private String sellBlocked;
+    private String restoreLoading;
+    private String restoreNetworkTitle;
     private String checkUsage;
     private String checkOffline;
     private String checkHeader;
@@ -207,7 +215,8 @@ public final class PluginConfig {
     /** Hook ids that can be switched off under Hooks.* in config.yml. */
     private static final String[] HOOK_IDS = {
             "mmoitems", "itemsadder", "oraxen", "nexo", "executableitems",
-            "slimefun", "ecoitems", "shopkeepers", "crazycrates"
+            "slimefun", "ecoitems", "shopkeepers", "crazycrates",
+            "quickshop", "zauctionhouse", "crazyauctions"
     };
 
     public PluginConfig(TimedItemPlugin plugin) {
@@ -217,7 +226,7 @@ public final class PluginConfig {
     public void load() {
         plugin.saveDefaultConfig();
         FileConfiguration raw = plugin.getConfig();
-        raw.addDefault("config-version", 12);
+        raw.addDefault("config-version", 13);
         raw.addDefault("Settings.language", "en");
         raw.addDefault("Settings.start_date_calculate_on_click", true);
         raw.addDefault("Settings.reset_player_health_if_armor", true);
@@ -289,6 +298,9 @@ public final class PluginConfig {
         raw.addDefault("Settings.container_scan.interval_seconds", 60);
         raw.addDefault("Settings.anti_hide.enabled", false);
         raw.addDefault("Settings.anti_hide.block_below_seconds", 60);
+        raw.addDefault("Settings.return_to_owner.enabled", false);
+        raw.addDefault("Settings.return_to_owner.remove_timer_on_return", true);
+        raw.addDefault("Settings.restore.network", false);
         raw.addDefault("Settings.blacklist.materials", new java.util.ArrayList<String>());
         raw.addDefault("Hooks.mmoitems", true);
         raw.addDefault("Hooks.itemsadder", true);
@@ -490,6 +502,11 @@ public final class PluginConfig {
         guiAdminNext = color(lang.getString("Gui.admin_next"));
         guiAdminExpired = color(lang.getString("Messages.admin_expired"));
         guiAdminRemoved = color(lang.getString("Messages.admin_removed"));
+        infoOwner = color(lang.getString("Messages.info_owner"));
+        returnedToOwner = color(lang.getString("Messages.returned_to_owner"));
+        sellBlocked = color(lang.getString("Messages.sell_blocked"));
+        restoreLoading = color(lang.getString("Messages.restore_loading"));
+        restoreNetworkTitle = color(lang.getString("Messages.restore_network_title"));
 
         expiresAtPrefix = color(lang.getString("DateFormat.expires_at"));
         usefulLifePrefix = color(lang.getString("DateFormat.useful_life"));
@@ -577,6 +594,11 @@ public final class PluginConfig {
         containerScanSeconds = Math.max(5, raw.getInt("Settings.container_scan.interval_seconds", 60));
         antiHideEnabled = raw.getBoolean("Settings.anti_hide.enabled", false);
         antiHideBelowSeconds = Math.max(1, raw.getInt("Settings.anti_hide.block_below_seconds", 60));
+
+        // Auto-return to owner (3.1+)
+        returnToOwnerEnabled = raw.getBoolean("Settings.return_to_owner.enabled", false);
+        removeTimerOnReturn = raw.getBoolean("Settings.return_to_owner.remove_timer_on_return", true);
+        restoreNetworkEnabled = raw.getBoolean("Settings.restore.network", false);
     }
 
     /** Hex (or decimal) string to an RGB int, defaulting to the fallback. */
@@ -914,6 +936,38 @@ public final class PluginConfig {
 
     public long getAntiHideBelowSeconds() {
         return antiHideBelowSeconds;
+    }
+    public boolean isReturnToOwnerEnabled() {
+        return returnToOwnerEnabled;
+    }
+
+    public boolean isRemoveTimerOnReturn() {
+        return removeTimerOnReturn;
+    }
+
+    /** Network restore: /ti restore reads the shared database instead of local memory. */
+    public boolean isRestoreNetworkEnabled() {
+        return restoreNetworkEnabled;
+    }
+
+    public String getInfoOwner() {
+        return infoOwner;
+    }
+
+    public String getReturnedToOwner() {
+        return returnedToOwner;
+    }
+
+    public String getSellBlocked() {
+        return sellBlocked;
+    }
+
+    public String getRestoreLoading() {
+        return restoreLoading;
+    }
+
+    public String getRestoreNetworkTitle() {
+        return restoreNetworkTitle;
     }
 
     /** True when expiry transformation is enabled (Settings.expiry_transform). */
@@ -1467,6 +1521,13 @@ public final class PluginConfig {
         lang.addDefault("Gui.admin_next", "&eNext page");
         lang.addDefault("Messages.admin_expired", "&aExpired the item of &e{player}&a.");
         lang.addDefault("Messages.admin_removed", "&aRemoved the timer of &e{player}&a's item.");
+        lang.addDefault("Messages.info_owner", "&7Owner: &e{player}");
+        lang.addDefault("Messages.returned_to_owner",
+                "&aYour rented item expired and was returned to you.");
+        lang.addDefault("Messages.sell_blocked",
+                "&cTimed items cannot be sold or listed! &7(expires in &e{time}&7)");
+        lang.addDefault("Messages.restore_loading", "&7Loading expired items...");
+        lang.addDefault("Messages.restore_network_title", "&8Expired items (all servers) &7({page}/{pages})");
         lang.addDefault("DateFormat.expires_at", "&cExpires: ");
         lang.addDefault("DateFormat.useful_life", "&7Lifetime: ");
         lang.addDefault("DateFormat.paused", "&7Paused: ");

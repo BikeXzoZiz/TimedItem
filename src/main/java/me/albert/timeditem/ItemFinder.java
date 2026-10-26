@@ -87,6 +87,29 @@ public final class ItemFinder {
     }
 
     /**
+     * Search hit test: the stack itself matches, or (3.1+) it is a
+     * shulker box whose contents match - the shulker is reported, since
+     * that is what the admin has to open.
+     */
+    private static boolean hitIn(ItemStack item, PluginConfig config, Predicate<ItemStack> matcher) {
+        if (isTimed(item, config) && matcher.test(item)) {
+            return true;
+        }
+        return Shulkers.isShulker(item) && anyInnerMatches(config, item, matcher);
+    }
+
+    private static boolean anyInnerMatches(PluginConfig config, ItemStack shulker,
+                                           Predicate<ItemStack> matcher) {
+        boolean[] hit = {false};
+        Shulkers.forEachInnerItem(shulker, (slot, inner) -> {
+            if (!hit[0] && isTimed(inner, config) && matcher.test(inner)) {
+                hit[0] = true;
+            }
+        });
+        return hit[0];
+    }
+
+    /**
      * Searches one player's whole inventory (storage + armor + offhand).
      * Must run on the player's region thread (Folia) or the main thread.
      */
@@ -97,7 +120,7 @@ public final class ItemFinder {
         ItemStack[] contents = player.getInventory().getContents();
         for (int slot = 0; slot < contents.length; slot++) {
             ItemStack item = contents[slot];
-            if (!isTimed(item, config) || !matcher.test(item)) {
+            if (!hitIn(item, config, matcher)) {
                 continue;
             }
             hits.add(PluginConfig.color(config.getFindHitPlayer()
@@ -142,7 +165,7 @@ public final class ItemFinder {
                     ItemStack[] contents = ((InventoryHolder) state).getInventory().getContents();
                     for (int slot = 0; slot < contents.length; slot++) {
                         ItemStack item = contents[slot];
-                        if (!isTimed(item, config) || !matcher.test(item)) {
+                        if (!hitIn(item, config, matcher)) {
                             continue;
                         }
                         hits.add(PluginConfig.color(config.getFindHitContainer()
@@ -163,7 +186,7 @@ public final class ItemFinder {
 
     private static void addGroundHit(List<String> hits, PluginConfig config,
                                      Predicate<ItemStack> matcher, ItemStack item, Location at) {
-        if (!isTimed(item, config) || !matcher.test(item)) {
+        if (!hitIn(item, config, matcher)) {
             return;
         }
         hits.add(PluginConfig.color(config.getFindHitGround()

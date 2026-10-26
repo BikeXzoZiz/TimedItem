@@ -112,6 +112,24 @@ public final class MongoStorage implements Storage {
     }
 
     @Override
+    public List<RecoveryRecord> loadRecoveryFor(String playerUuid, int limit) {
+        List<RecoveryRecord> out = new ArrayList<RecoveryRecord>();
+        for (Document doc : recovery.find(Filters.eq("player_uuid", playerUuid))
+                .sort(Sorts.descending("time_millis"))
+                .limit(Math.max(1, limit))) {
+            out.add(new RecoveryRecord(doc.getString("_id"), doc.getLong("time_millis"),
+                    doc.getString("player_uuid"), doc.getString("player_name"),
+                    doc.getString("world"), doc.getString("format"), doc.getString("data")));
+        }
+        return out;
+    }
+
+    @Override
+    public int countRecoveryFor(String playerUuid) {
+        return (int) recovery.countDocuments(Filters.eq("player_uuid", playerUuid));
+    }
+
+    @Override
     public void appendAudit(AuditRecord record) {
         audit.insertOne(new Document("time_millis", record.getTimeMillis())
                 .append("actor_uuid", record.getActorUuid())

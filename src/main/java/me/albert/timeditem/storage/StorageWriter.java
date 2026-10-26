@@ -51,6 +51,19 @@ public final class StorageWriter {
         execute(() -> storage.deleteRecovery(id));
     }
 
+    /**
+     * Blocking per-player recovery query (network restore) - the caller
+     * must run it on an async thread.
+     */
+    public List<RecoveryRecord> loadRecoveryFor(String playerUuid, int limit) {
+        return storage.loadRecoveryFor(playerUuid, limit);
+    }
+
+    /** Blocking per-player recovery count - run it on an async thread. */
+    public int countRecoveryFor(String playerUuid) {
+        return storage.countRecoveryFor(playerUuid);
+    }
+
     /** Fire-and-forget audit append. */
     public void appendAudit(AuditRecord record) {
         execute(() -> storage.appendAudit(record));

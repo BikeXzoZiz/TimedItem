@@ -64,6 +64,10 @@ Messages:
   check_empty: "&7{player} ไม่มีไอเทมจับเวลาเลย"
   admin_expired: "&aทำให้ไอเทมของ &e{player} &aหมดอายุทันทีแล้ว"
   admin_removed: "&aลบตัวจับเวลาของไอเทม &e{player} &aแล้ว"
+  info_owner: "&7เจ้าของ: &e{player}"
+  returned_to_owner: "&aของเช่าของคุณหมดอายุและถูกส่งกลับมาแล้ว"
+  sell_blocked: "&cไอเทมจับเวลาขายหรือลงประมูลไม่ได้! &7(หมดอายุในอีก &e{time}&7)"
+  restore_network_title: "&8ไอเทมที่หมดอายุ (ทุกเซิร์ฟเวอร์) &7({page}/{pages})"
 
 DateFormat:
   # Prefix ที่เขียนลง lore ของไอเทม — ห้ามแก้หลังมีไอเทมที่มี timer อยู่แล้ว

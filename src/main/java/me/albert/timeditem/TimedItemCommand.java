@@ -113,6 +113,35 @@ public final class TimedItemCommand implements CommandExecutor {
         if (sub.equals("restore")) {
             Player player = requirePlayer(sender, config);
             if (player != null) {
+                // network mode (3.1+): read one player's entries from the
+                // shared database across all servers of the network
+                if (plugin.isNetworkRestoreActive()) {
+                    java.util.UUID target = player.getUniqueId();
+                    String targetName = player.getName();
+                    int page = 0;
+                    if (args.length >= 2) {
+                        if (args[1].matches("\\d+")) {
+                            try {
+                                page = Math.max(0, Integer.parseInt(args[1]) - 1);
+                            } catch (NumberFormatException ignored) {
+                                page = 0;
+                            }
+                        } else {
+                            Player online = Bukkit.getPlayerExact(args[1]);
+                            if (online != null) {
+                                target = online.getUniqueId();
+                                targetName = online.getName();
+                            } else {
+                                // may resolve a name via the usercache; admin command only
+                                org.bukkit.OfflinePlayer offline = Bukkit.getOfflinePlayer(args[1]);
+                                target = offline.getUniqueId();
+                                targetName = args[1];
+                            }
+                        }
+                    }
+                    plugin.restoreMenu().openNetwork(player, target, targetName, page);
+                    return true;
+                }
                 RecoveryStore store = plugin.recoveryStore();
                 if (store.size() == 0) {
                     player.sendMessage(config.getPrefix() + config.getRestoreEmpty());
@@ -480,6 +509,7 @@ public final class TimedItemCommand implements CommandExecutor {
         ItemStack gift = held.clone();
         gift.setAmount(amount);
         applyGiveTimer(gift, config, countdownType, seconds);
+        PdcCompat.stampOwner(gift, player);
         if (scan.transformKey != null) {
             PdcCompat.writeTransform(gift, scan.transformKey);
         }
@@ -555,6 +585,7 @@ public final class TimedItemCommand implements CommandExecutor {
         amount = Math.min(amount, built.getMaxStackSize());
         built.setAmount(amount);
         applyGiveTimer(built, config, countdownType, seconds);
+        PdcCompat.stampOwner(built, sender instanceof Player ? (Player) sender : null);
         if (transformKey != null) {
             PdcCompat.writeTransform(built, transformKey);
         }
@@ -634,6 +665,11 @@ public final class TimedItemCommand implements CommandExecutor {
         if (type == null) {
             player.sendMessage(config.getPrefix() + config.getNoTimer());
             return;
+        }
+        String[] owner = PdcCompat.readOwner(item);
+        if (owner != null) {
+            player.sendMessage(config.getPrefix() + config.getInfoOwner()
+                    .replace("{player}", owner[1]));
         }
         String message;
         if (type == TimeLore.Type.EXPIRE) {

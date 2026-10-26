@@ -74,6 +74,21 @@ public final class HookManager {
         crazycratesSeconds = parseTimer("CrazyCrates", config.getCrazyCratesAutoTimer());
         hookDistribution("Shopkeepers", "Shopkeepers", shopkeepersSeconds, config);
         hookDistribution("CrazyCrates", "CrazyCrates", crazycratesSeconds, config);
+        // block selling timed items on shop/auction plugins (3.1+)
+        hookSellBlock("QuickShop", "QuickShop", config, new String[]{
+                "com.ghostchu.quickshop.api.event.ShopPreCreateEvent",
+                "com.ghostchu.quickshop.api.event.ShopCreateEvent",
+                "org.maxgamer.quickshop.api.event.ShopPreCreateEvent",
+                "org.maxgamer.quickshop.Event.ShopPreCreateEvent",
+                "org.maxgamer.quickshop.api.event.ShopCreateEvent",
+                "org.maxgamer.quickshop.Event.ShopCreateEvent"});
+        hookSellBlock("zAuctionHouse", "zAuctionHouse", config, new String[]{
+                "fr.maxlego08.zauctionhouse.api.event.events.ZSellEvent",
+                "fr.maxlego08.zauctionhouse.api.event.ZSellEvent",
+                "fr.maxlego08.zauctionhouse.api.event.events.ZAuctionSellEvent"});
+        hookSellBlock("CrazyAuctions", "CrazyAuctions", config, new String[]{
+                "com.badbones69.crazyauctions.api.events.AuctionListEvent",
+                "com.badbones69.crazyauctions.api.events.AuctionSellEvent"});
         if (!active.isEmpty()) {
             plugin.getLogger().info("Hooked into item plugins: " + String.join(", ", active)
                     + " (identify + /ti give <player> <plugin>:<id> <time>).");
@@ -210,6 +225,28 @@ public final class HookManager {
             registration.unregister();
         }
         distributionRegistrations.clear();
+    }
+
+    /**
+     * Blocks selling/listing timed items on one shop plugin (3.1+):
+     * gated by Hooks.<id>.enabled, active only when the plugin is
+     * installed, silent no-op when its event class is unknown here.
+     */
+    private void hookSellBlock(String pluginName, String hookId, PluginConfig config,
+                               String[] eventCandidates) {
+        if (!config.isHookEnabled(hookId)) {
+            return;
+        }
+        if (!Bukkit.getPluginManager().isPluginEnabled(pluginName)) {
+            return;
+        }
+        ReflectiveEventHook.Registration registration =
+                ShopSellBlockHook.register(plugin, hookId, eventCandidates);
+        if (registration != null) {
+            distributionRegistrations.add(registration);
+            plugin.getLogger().info("Hooked into " + pluginName
+                    + " (block selling timed items).");
+        }
     }
 
     private long parseTimer(String hook, String raw) {

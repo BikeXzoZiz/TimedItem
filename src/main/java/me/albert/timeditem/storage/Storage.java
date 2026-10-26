@@ -31,6 +31,17 @@ public interface Storage extends AutoCloseable {
     /** Deletes one recovery entry (it was restored to a player). */
     void deleteRecovery(String id);
 
+    /**
+     * Newest-first recovery entries of one player uuid, up to limit
+     * (3.1+, network restore across servers). Blocking - run on an async
+     * thread. Flat storage filters its local list; SQL/Mongo query the
+     * shared database.
+     */
+    List<RecoveryRecord> loadRecoveryFor(String playerUuid, int limit);
+
+    /** How many recovery entries one player uuid has (restore reminder). */
+    int countRecoveryFor(String playerUuid);
+
     /** Appends one audit entry. */
     void appendAudit(AuditRecord record);
 

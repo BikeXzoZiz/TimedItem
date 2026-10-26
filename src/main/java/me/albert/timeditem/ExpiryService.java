@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -73,8 +74,18 @@ public final class ExpiryService {
         DebugLog.verbose("Expired " + item.getType()
                 + (player != null ? " from " + player.getName() : " (ground/frame)")
                 + (world != null ? " in " + world.getName() : ""));
-        plugin.recoveryStore().record(item, player, world);
-        removal.run();
+        // Auto-return (3.1+): items stamped with an owner go back to them
+        // instead of the recovery log - unless a transformation replaces them.
+        String[] ownerTag = config.isReturnToOwnerEnabled() && event.getReplacement() == null
+                ? PdcCompat.readOwner(item) : null;
+        Player owner = ownerTag == null ? null : findOnline(ownerTag[0]);
+        if (ownerTag != null && owner != null) {
+            removal.run();
+            returnToOwner(item, owner, config);
+        } else {
+            plugin.recoveryStore().record(item, player, world);
+            removal.run();
+        }
         Player viewer = player;
         if (viewer == null && effectCenter != null && !SchedulerCompat.isFolia()) {
             // On Folia reading other players' positions cross-region is not
@@ -105,6 +116,70 @@ public final class ExpiryService {
         plugin.storage().incrementExpired(DAY_FORMAT.get().format(new Date()),
                 item.getType().name());
         return true;
+    }
+
+    /**
+     * Expires due items inside a shulker box item (3.1+): walks the
+     * shulker's block-state inventory, runs every due item through the
+     * normal pipeline and writes the modified contents back into the
+     * outer stack. Returns true when the contents changed. With a player
+     * (container opened) the replacement goes to them; without one
+     * (periodic scan) it drops at the shulker's location.
+     */
+    public boolean expireInsideShulker(ItemStack shulker, Player player, Location effectCenter,
+                                       World world, PluginConfig config) {
+        org.bukkit.inventory.Inventory inner = Shulkers.innerInventory(shulker);
+        if (inner == null) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        boolean changed = false;
+        for (int slot = 0; slot < inner.getSize(); slot++) {
+            ItemStack innerItem = inner.getItem(slot);
+            if (innerItem == null || innerItem.getType() == org.bukkit.Material.AIR) {
+                continue;
+            }
+            TimeLore.TimerInfo info = TimeLore.analyze(innerItem, config);
+            if (info == null || info.getType() != TimeLore.Type.EXPIRE
+                    || info.getExpiry() == null || !info.getExpiry().isBefore(now)) {
+                continue;
+            }
+            final int index = slot;
+            expire(innerItem, player, effectCenter, world,
+                    () -> inner.setItem(index, null), false, config);
+            changed = true;
+        }
+        if (changed) {
+            Shulkers.writeBack(shulker);
+        }
+        return changed;
+    }
+
+    /** Online player by uuid, or null. */
+    private static Player findOnline(String uuid) {
+        try {
+            return Bukkit.getPlayer(java.util.UUID.fromString(uuid));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Hands the expired item back to its (online) owner: the timer is
+     * stripped (configurable) so it can be rented out again, leftovers
+     * drop at the owner. Only the owner is notified - the holder already
+     * got the normal expiry effects.
+     */
+    private void returnToOwner(ItemStack item, Player owner, PluginConfig config) {
+        ItemStack returned = item.clone();
+        if (config.isRemoveTimerOnReturn()) {
+            TimeLore.removeTimer(returned, config);
+        }
+        Map<Integer, ItemStack> leftover = owner.getInventory().addItem(returned);
+        for (ItemStack rest : leftover.values()) {
+            owner.getWorld().dropItemNaturally(owner.getLocation(), rest);
+        }
+        owner.sendMessage(config.getPrefix() + config.getReturnedToOwner());
     }
 
     /**

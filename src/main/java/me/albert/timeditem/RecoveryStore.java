@@ -109,6 +109,12 @@ public final class RecoveryStore {
         }
     }
 
+    /** Builds an entry from a storage record, decoding the item; null when unreadable. */
+    public static Entry fromRecord(RecoveryRecord record) {
+        ItemStack item = ItemSerializer.fromBase64(record.getBase64());
+        return item == null ? null : new Entry(record, item);
+    }
+
     /** Records one expired item; safe to call from any thread. */
     public synchronized void record(ItemStack item, Player player, World world) {
         if (!plugin.pluginConfig().isRecoveryEnabled() || item == null

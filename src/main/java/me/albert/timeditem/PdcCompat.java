@@ -169,8 +169,7 @@ public final class PdcCompat {
     }
 
     /** Generic string key under the timeditem namespace (visual stages etc.). */
-    public static void writeString(ItemStack item, String key, String value) {
-        if (!available) {
+    public static void writeString(ItemStack item, String key, String value) {        if (!available) {
             return;
         }
         try {
@@ -226,6 +225,30 @@ public final class PdcCompat {
         // created per call only for the rare visual-stage keys; the hot
         // path keys (type/value/uid/transform) have their own fields
         return new NamespacedKey("timeditem", key);
+    }
+
+    /**
+     * Tags the item with its owner ("uuid|name", 3.1+): /ti give stamps
+     * the sender, so auto-return can hand the item back when it expires.
+     */
+    public static void stampOwner(ItemStack item, org.bukkit.entity.Player owner) {
+        if (owner == null) {
+            return;
+        }
+        writeString(item, "owner", owner.getUniqueId().toString() + "|" + owner.getName());
+    }
+
+    /** The owner tag split into {uuid, name}, or null when the item has none. */
+    public static String[] readOwner(ItemStack item) {
+        String raw = readString(item, "owner");
+        if (raw == null) {
+            return null;
+        }
+        int split = raw.indexOf('|');
+        if (split <= 0 || split == raw.length() - 1) {
+            return null;
+        }
+        return new String[]{raw.substring(0, split), raw.substring(split + 1)};
     }
 
     public static void clear(ItemStack item) {

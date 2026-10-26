@@ -7,11 +7,11 @@ description: Give items a lifetime - they expire when the timer runs out.
 authors: [BikeXzoZiz]
 # all integration hooks are optional and reflection based - the plugin
 # still runs (and stays a single jar) when none of these are installed
-softdepend: [PlaceholderAPI, MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, Slimefun, ExecutableItems, SCore, EcoItems, Shopkeepers, CrazyCrates]
+softdepend: [PlaceholderAPI, MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, Slimefun, ExecutableItems, SCore, EcoItems, Shopkeepers, CrazyCrates, QuickShop, zAuctionHouse, CrazyAuctions]
 commands:
   timeditem:
     description: Manage timed items
-    usage: /<command> set <time> | add <time> | give <player> [plugin:id] <time> [amount] | pause | resume | remove | info | menu | restore | reload
+    usage: /<command> set <time> | add <time> | give <player> [plugin:id] <time> [amount] | pause | resume | remove | info | menu | restore [player] | find | stats | audit | admin | check | debug | reload
     aliases: [ti]
     permission: timeditem.admin
     permission-message: §cYou do not have permission to use TimedItem.

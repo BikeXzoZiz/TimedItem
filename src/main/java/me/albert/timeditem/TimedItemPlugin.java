@@ -138,6 +138,16 @@ public final class TimedItemPlugin extends JavaPlugin {
         return adminMenu;
     }
 
+    /**
+     * True when /ti restore should read the shared database (network
+     * mode): enabled in the config and a shared backend in use.
+     */
+    public boolean isNetworkRestoreActive() {
+        return config.isRestoreNetworkEnabled() && storageWriter != null
+                && (storageWriter.backendId().equals("mysql")
+                        || storageWriter.backendId().equals("mongodb"));
+    }
+
     /** Integrations with other item plugins (Hooks.* config section). */
     public HookManager hooks() {
         return hooks;

@@ -65,6 +65,9 @@ public final class ContainerScanTask implements Runnable {
             TimeLore.TimerInfo info = TimeLore.analyze(item, config);
             if (info == null || info.getType() != TimeLore.Type.EXPIRE
                     || info.getExpiry() == null || !info.getExpiry().isBefore(now)) {
+                // not due itself - but its shulker contents can be
+                plugin.expiryService().expireInsideShulker(item, null, state.getLocation(),
+                        state.getWorld(), config);
                 continue;
             }
             final int index = slot;

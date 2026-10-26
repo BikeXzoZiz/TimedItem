@@ -2,6 +2,24 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [3.1.0] - 2026-10-27
+
+### Added
+- **สแกนข้างใน shulker ซ้อน** (3.1+) — ตู้เก็บของ/การค้นหา/anti-hide มองเข้าไปใน shulker box ได้อีก 1 ชั้น (vanilla ซ้อนกันไม่ได้อยู่แล้ว):
+  - ของหมดอายุใน shulker ที่อยู่ในตู้ → expire ตาม container scan ทั้งแบบ open (replacement เข้า inventory คนเปิด) และ periodic (replacement ดรอปที่ตำแหน่งตู้) — แก้ข้างในด้วย BlockStateMeta API สะอาด ไม่แตะ NBT ดิบ
+  - shulker ใน inventory ผู้เล่นก็โดนตรวจตามรอบ · `/ti find` รายงานตำแหน่ง shulker ที่ข้างในมีของตรงเงื่อนไข
+  - **ปิดช่องโหว่ anti-hide**: ยัด shulker ที่ข้างในมีของใกล้หมดอายุลงตู้ = ถูกบล็อกเหมือนยัดของตรงๆ
+- **Restore ข้ามเซิร์ฟ (network mode)** — `Settings.restore.network: true` + ฐานข้อมูลแชร์ (mysql/mongodb): `/ti restore` อ่านไอเทมที่หมดอายุของผู้เล่นจาก **ทุกเซิร์ฟเวอร์** ใน network, `/ti restore <ผู้เล่น>` ให้แอดมินดู/คืนของผู้เล่นคนนั้นข้ามเซิร์ฟ, แจ้งเตือนตอน join นับจาก DB — ลบด้วย id จึงปลอดภัยกับหลายเซิร์ฟพร้อมกัน (local mode ทำงานเหมือนเดิมทุกอย่าง)
+- **Auto-return ให้เจ้าของ (ของเช่า)** — `Settings.return_to_owner`: `/ti give` ประทับ **ผู้ส่ง** เป็นเจ้าของใน NBT (`/ti info` แสดง Owner) — เมื่อไอเทมหมดอายุ ถ้าเจ้าของออนไลน์จะได้ของกลับเข้า inventory ทันที (ตัด timer ให้เช่าต่อได้ + แจ้งเจ้าของ); เจ้าของออฟไลน์ = ลง recovery ตามปกติ; ถ้าตั้ง transform profile ไว้ transform มีสิทธิ์ก่อน
+- **บล็อกขาย timed item ในร้านค้า/ประมูล** — QuickShop (รวม Hikari fork), zAuctionHouse และ CrazyAuctions: event สร้างร้าน/ลงขายของที่มี timer จะถูก cancel พร้อมแจ้งผู้เล่น — ปิดรายตัวได้ที่ `Hooks.quickshop|zauctionhouse|crazyauctions: false`; ปลั๊กอินไหนไม่ได้ติดตั้ง/เวอร์ชัน event ไม่ตรง = ปิดตัวเองอย่างปลอดภัย (reflection ล้วน ตามแพทเทิร์นเดิม)
+
+### Technical
+- `Shulkers` helper (BlockStateMeta → live ShulkerBox inventory → setBlockState write-back) — entry gated ที่ material `*SHULKER_BOX` เท่านั้น กัน overhead
+- `Storage` interface + 3 backends เพิ่ม `loadRecoveryFor(uuid, limit)` / `countRecoveryFor(uuid)` (SQL: `WHERE player_uuid = ? ORDER BY time_millis DESC LIMIT ?`); RestoreMenu มี 2 source (local memory / async DB) ในคลาสเดียว
+- PDC key ใหม่ `timeditem:owner` ("uuid|name"); `ItemExpireEvent` pipeline เพิ่มสาย return-to-owner ก่อน recovery
+- `hook/ShopSellBlockHook` — hook กลางตัวเดียว probe event class หลาย candidate + getter probe (getItem/getItemStack/getStack) + cancel แบบ reflective
+- plugin.yml softdepend เพิ่ม QuickShop, zAuctionHouse, CrazyAuctions; unit tests 80 ชุดผ่าน; smoke test บน Paper 1.21 ผ่าน
+
 ## [3.0.0] - 2026-10-27
 
 ### Added

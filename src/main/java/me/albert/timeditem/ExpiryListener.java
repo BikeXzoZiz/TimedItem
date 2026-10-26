@@ -321,18 +321,35 @@ public final class ExpiryListener implements Listener {
                 return;
             }
             scanInventory(player, true);
-            // Restore reminder for admins: items of this player sit in the
-            // recovery log and can be handed back with /ti restore.
-            if (player.hasPermission("timeditem.admin")) {
+            // Restore reminder: local mode counts the in-memory log;
+            // network mode counts the shared database (async) and also
+            // covers items that expired on other servers.
+            if (plugin.isNetworkRestoreActive()) {
+                final java.util.UUID uuid = player.getUniqueId();
+                SchedulerCompat.runAsync(plugin, () -> {
+                    int waiting = plugin.storage().countRecoveryFor(uuid.toString());
+                    if (waiting > 0) {
+                        sendRestoreReminder(player, waiting);
+                    }
+                });
+            } else if (player.hasPermission("timeditem.admin")) {
                 int waiting = plugin.recoveryStore().countForPlayer(
                         player.getUniqueId().toString());
                 if (waiting > 0) {
-                    player.sendMessage(plugin.pluginConfig().getPrefix()
-                            + plugin.pluginConfig().getRestoreReminder()
-                            .replace("{count}", String.valueOf(waiting)));
+                    sendRestoreReminder(player, waiting);
                 }
             }
         }, 1L);
+    }
+
+    private void sendRestoreReminder(Player player, int waiting) {
+        SchedulerCompat.runAtPlayer(plugin, player, () -> {
+            if (player.isOnline()) {
+                player.sendMessage(plugin.pluginConfig().getPrefix()
+                        + plugin.pluginConfig().getRestoreReminder()
+                        .replace("{count}", String.valueOf(waiting)));
+            }
+        });
     }
 
     @EventHandler
@@ -411,6 +428,9 @@ public final class ExpiryListener implements Listener {
             if (changed && inv.getItem(slot) != null) {
                 inv.setItem(slot, inv.getItem(slot)); // write back in case the stack was a copy
             }
+            // timed items parked inside a shulker box in the player's inventory
+            plugin.expiryService().expireInsideShulker(item, player,
+                    player.getLocation(), player.getWorld(), config);
             warnIfNeeded(player, info, config, now);
         }
     }
