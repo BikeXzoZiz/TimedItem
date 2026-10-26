@@ -1,4 +1,4 @@
-# TimedItem 3.1.0
+# TimedItem configuration
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 # Messages live in lang/messages_<language>.yml (see Settings.language).

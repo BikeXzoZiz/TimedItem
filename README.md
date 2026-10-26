@@ -65,7 +65,7 @@
 
 ## 🚀 เริ่มใช้ใน 1 นาที
 
-1. ดาวน์โหลด `TimedItem-3.1.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
+1. ดาวน์โหลด `TimedItem-3.1.2.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
 2. รีสตาร์ทเซิร์ฟเวอร์ — เสร็จ! (ค่า default ใช้ได้ทันที)
 3. ลองเลย:
 
@@ -197,91 +197,257 @@ Settings:
 **bStats:** ลงทะเบียนแล้วเป็น [TimedItemRewrite (ID 34946)](https://bstats.org/plugin/bukkit/TimedItemRewrite/34946) — ID อยู่ที่ `BSTATS_PLUGIN_ID` ใน `TimedItemPlugin.java`, ปิดสถิติได้ด้วย `Settings.metrics: false`
 
 <details>
-<summary>📄 <b>ตัวอย่าง config.yml ครบทุก key (ค่า default ล่าสุด)</b> — คลิกขยาย</summary>
+<summary>📄 <b>ตัวอย่าง config.yml ครบทุก key (ค่า default ล่าสุด)</b> — คลิกขยาย · <sub>บล็อกนี้ sync อัตโนมัติจาก <code>src/main/resources/config.yml</code> โดย <code>scripts/sync-readme.py</code></sub></summary>
 
+<!-- BEGIN:sync-readme:config -->
 ```yaml
-# TimedItem config.yml — ทุก key มี default ในตัว: config ขาด/เก่าแค่ไหน
-# ก็ self-heal เติมให้เอง ไม่มีวันพัง
-# ข้อความทั้งหมด (Messages/DateFormat/Gui) อยู่ที่ lang/messages_<ภาษา>.yml
-config-version: 8
+# TimedItem configuration
+# Every key has a built-in default - if a key is missing the default is
+# used and written back to this file, so a partial config never crashes.
+# Messages live in lang/messages_<language>.yml (see Settings.language).
+
+config-version: 13
 
 Settings:
-  language: en                         # en / th / ไฟล์ lang/messages_<x>.yml ของคุณ
-  start_date_calculate_on_click: true  # true = lifetime เริ่มนับเมื่อใช้ครั้งแรก · false = เริ่มทันทีตอน set
-  reset_player_health_if_armor: true   # เกราะที่เพิ่ม max health ถูกรีเซ็ตเป็น 20 เมื่อหมดอายุ (กัน exploit)
-  metrics: true                        # bStats anonymous statistics
-  debug: false                         # verbose [Debug] log — สลับได้ทันที: /ti debug on|off
-
-  # การตรวจของหมดอายุเป็นรอบ (นอกเหนือจาก event เช่น คลิก/ใช้/หยิบ)
+  # Language file to load messages from: lang/messages_en.yml,
+  # lang/messages_th.yml, or drop in your own lang/messages_<x>.yml.
+  language: "en"
+  # true  = the timer starts counting on the item's first click/use
+  # false = the timer starts immediately when /ti set is used
+  start_date_calculate_on_click: true
+  # Reset the player's max health to 20 when expired armor is removed
+  # (anti-exploit for health-boosting timed armor).
+  reset_player_health_if_armor: true
+  # Anonymous usage statistics via bStats (https://bstats.org)
+  metrics: true
+  # Verbose diagnostics for hunting bugs: extra [Debug] lines in the
+  # console (silent fallbacks, every expiry, recovery writes). Toggle it
+  # for one session with /ti debug on|off - that does not write back
+  # here, reload/restart returns to this value. /ti debug export writes
+  # a bug report file to plugins/TimedItem/debug/ (the Discord webhook
+  # URL is never included in reports).
+  debug: false
   expire_check:
+    # Also check every online player's inventory periodically, instead of
+    # only on inventory click / item use / join / damage events.
     enabled: true
-    interval_seconds: 10               # สแกน inventory ทุกกี่วินาที
-    scan_world_items: false            # สแกนของบนพื้น/ใน item frame/บน armor stand (แพง — เปิดเมื่อจำเป็น)
-    ignore_creative: true              # ของ timed ในมือ creative ไม่หมดอายุและไม่มี countdown
-
-  # แจ้ง Discord ทุกครั้งที่ของหมดอายุ (webhook ในตัว ไม่ต้องติดตั้งอะไรเพิ่ม)
-  discord_webhook:
-    enabled: false
-    url: ""
-    username: "TimedItem"
-    message: "{player}'s timed item expired: {item} ({world})"
-
-  # เตือนผู้เล่นล่วงหน้าหลายระยะ — แต่ละค่า = ครั้งเดียวตอนเหลือเท่านั้น
+    interval_seconds: 10
+    # Also scan ground items, item frames and armor stands for expired
+    # items every interval. Off by default - it walks every loaded world.
+    # (On Folia this uses per-entity tracking instead of a world scan.)
+    scan_world_items: false
+    # true  = creative players are skipped entirely: their timed items
+    #         neither expire nor show a countdown/warnings.
+    # false = creative players are processed like any other gamemode.
+    ignore_creative: true
   warning:
+    # Message + sound when an item enters its final seconds.
+    # Requires expire_check to be enabled.
     enabled: true
-    seconds: 60                        # fallback ถ้า stages ว่าง
-    stages: [60]                       # แนะนำ: [600, 60, 10] = เหลือ 10 นาที / 1 นาที / 10 วิ
+    # Single-stage fallback used when "stages" is empty.
+    seconds: 60
+    # One warning per threshold (seconds of remaining time), fired as the
+    # item counts down through each. Example for warnings at 10m, 1m and 10s:
+    # stages: [600, 60, 10]
+    stages: [60]
     sound:
-      name: block.note_block.pling
+      name: "block.note_block.pling"
       volume: 1.0
       pitch: 1.5
-
   particles:
+    # Effect played at the player when an item expires.
     enabled: true
-    name: FLAME                        # ชื่อ particle — ใส่ผิด fallback เป็น FLAME
+    # Particle name, e.g. FLAME, CRIT, SMOKE, HEART (unknown names fall back to FLAME)
+    name: "FLAME"
     count: 30
-
-  expiry_commands: []                  # คำสั่ง console ตอนของหมดอายุ เช่น "discord message timed {player}'s item expired!"
-
-  actionbar:
-    enabled: true
-    format: "&e⌛ {time}"              # countdown บน actionbar ตอนถือของ timed
-
+  expiry_commands:
+    # Console commands run when a player's item expires, {player} available. e.g.:
+    # - "say {player}'s timed item expired!"
+    # - "give {player} diamond 1"
+    # Ground/frame expiry has no player: commands containing {player} are
+    # skipped, the rest still run.
+    []
+  expiry_transform:
+    # Instead of vanishing, expired items turn into another item
+    # (2.8+). Profiles are defined under Settings.transforms; pick one
+    # per item with /ti set 7d transform:ash (or ... give Steve 7d
+    # transform:ash), leave "default" empty to transform only tagged
+    # items.
+    enabled: false
+    # Profile key for items without their own transform tag ("" = none).
+    default: ""
+  transforms:
+    # One profile per key. Result item: "material" (vanilla) or
+    # "custom_id" (plugin:id from an integration, wins over material).
+    # name/lore are optional overrides, amount clamps to the stack size,
+    # commands run on the console at the moment of the transformation.
+    # This example is inactive until expiry_transform.enabled: true:
+    #  ash:
+    #    material: "GUNPOWDER"
+    #    name: "&8Ash"
+    #    lore: ["&7Remains of an expired item"]
+    #    amount: 1
+    #    commands: []
+    []
+  grace:
+    # In the final <seconds> the item can no longer be used (right
+    # click / consume is cancelled with a warning) but it still only
+    # disappears when the timer reaches zero.
+    enabled: false
+    seconds: 30
+  renewal:
+    # Renewal token (2.8+): right-click with the token in one hand and
+    # a timed item in the other adds <add_time> and consumes one token.
+    # Hand the tokens out with crates (CrazyCrates integration) or /give.
+    enabled: false
+    add_time: "7d"
+    token:
+      # Vanilla material OR custom_id ("plugin:id") of the token.
+      material: "CLOCK"
+      custom_id: ""
+      # When set, only tokens with this exact display name count.
+      name: ""
+  # Countdown timer kinds (2.9+): /ti set playtime <time> counts down only
+  # while the owner is online; /ti set held <time> only while held/worn.
+  # Give forms: /ti give <player> playtime:<time> [amount] / held:<time>.
+  visual_stages:
+    # Visual decay (3.0+): when the remaining time drops below a
+    # threshold, the item's name gets a color and/or an enchant glint.
+    # Vanilla items are recolored, custom items only glow. Order does
+    # not matter; list them most severe last for readability. Empty = off.
+    #  - at_seconds: 3600
+    #    name_color: "&6"
+    #    glow: true
+    #  - at_seconds: 300
+    #    name_color: "&c"
+    #    glow: true
+    []
+  hologram:
+    # Floating countdown above dropped timed items (3.0+). Needs 1.19.4+
+    # (silently off on older servers) and is not available on Folia.
+    enabled: false
+    format: "&e⌛ {time}"
+    height: 0.5
+  live_lore:
+    # Rewrite the timer lore line of the held item every second so it
+    # shows a live countdown (3.0+). Needs 1.14+; slightly more item
+    # writes than the actionbar alone, so it is off by default.
+    enabled: false
+    format: "&e⌛ {time}"
+  container_scan:
+    # Scan containers for expired items (3.0+):
+    # "open"     = check a container's contents when a player opens it
+    #              (cheap, works everywhere including Folia)
+    # "periodic" = walk every loaded chunk's containers on a timer
+    #              (thorough, classic servers only, heavier)
+    # "both"     = both of the above
+    enabled: false
+    mode: "open"
+    interval_seconds: 60
+  anti_hide:
+    # With container scanning on, players could park items about to
+    # expire inside chests nobody opens. This blocks moving items with
+    # less than <block_below_seconds> left into containers (3.0+).
+    enabled: false
+    block_below_seconds: 60
+  # Administrative lookups (no player-facing effect):
+  # /ti find <material|plugin:id|name> locates timed items in inventories,
+  # containers and on the ground; /ti stats [days] shows expiry counts;
+  # /ti audit [page] lists recent timer actions.
   sound:
+    # Played at the player when an item expires. The name is a sound key
+    # which works on every 1.13+ server:
+    # https://minecraft.wiki/w/Sounds.json
     enabled: true
-    name: entity.blaze.death           # เสียงตอนของหมดอายุ
+    name: "entity.blaze.death"
     volume: 10.0
     pitch: 1.2
-
+  actionbar:
+    # Shows the remaining time in the actionbar while holding a timed item
+    # (counting down, paused and not-yet-started lifetimes).
+    enabled: true
+    format: "&e⌛ {time}"
   update_check:
+    # Check GitHub Releases for a newer TimedItem version and notify the
+    # console and admins on join.
     enabled: true
-    repository: "BikeXzoZiz/TimedItem" # ที่ไว้เช็คเวอร์ชันใหม่ (GitHub repo)
-
-  # กู้คืนของที่หมดอายุ (/ti restore)
+    # GitHub repository as owner/name used for the release check.
+    repository: "BikeXzoZiz/TimedItem"
   recovery:
+    # Save every expired item so admins can hand it back with /ti restore.
     enabled: true
-    max_items: 500                     # เก็บได้สูงสุดกี่รายการ
-    keep_days: 7                       # เก็บไว้กี่วัน
-
+    # Maximum entries kept in the log (oldest dropped first).
+    max_items: 500
+    # Entries older than this many days are pruned on startup.
+    keep_days: 7
+    # Network restore (3.1+): with a shared mysql/mongodb backend,
+    # /ti restore reads one player's expired items from EVERY server of
+    # the network instead of local memory. Needs a restart after changing.
+    network: false
+  return_to_owner:
+    # Auto-return (3.1+): /ti give stamps the sender as owner - when the
+    # item expires it goes straight back to them (if online) instead of
+    # the recovery log. A transformation profile, when set, wins.
+    enabled: false
+    # Strip the timer before returning, so the item can be rented again.
+    remove_timer_on_return: true
+  storage:
+    # Where recovery entries, the audit log and the expiry statistics
+    # live: "flat" (plugins/TimedItem/ files, default), "sqlite",
+    # "mysql" (MariaDB/MySQL, for networks sharing one database) or
+    # "mongodb". Changing this needs a restart; the first start with a
+    # database imports the existing recovery.log automatically
+    # (recovery.log -> recovery.log.imported).
+    type: "flat"
+    mysql:
+      host: "localhost"
+      port: 3306
+      database: "timeditem"
+      user: "timeditem"
+      password: ""
+      use_ssl: false
+      pool_size: 4
+    sqlite:
+      # File name inside plugins/TimedItem/.
+      file: "database.db"
+    mongodb:
+      # Standard MongoDB connection string; the database in the URI is
+      # used unless mongodb.database overrides it.
+      uri: "mongodb://localhost:27017"
+      database: "timeditem"
+    # Maximum audit entries kept (/ti audit; timer actions like
+    # set/add/pause/give/restore).
+    audit_history: 5000
+  discord_webhook:
+    # Post a message to a Discord channel whenever an item expires
+    # (players and ground items). Create the webhook in Discord:
+    # channel settings -> Integrations -> Webhooks -> copy URL.
+    enabled: false
+    url: ""
+    # Name shown as the message author on Discord.
+    username: "TimedItem"
+    # Message template. Placeholders: {player} (- for ground expiry),
+    # {item} (material name), {world}.
+    message: "{player}'s timed item expired: {item} ({world})"
+    # Send as a rich embed instead of a plain message (2.8+). The
+    # message template above becomes the embed description.
+    use_embed: false
+    embed_title: "TimedItem"
+    # Embed color, hex without '#'.
+    embed_color: "ff5555"
   blacklist:
-    materials: []                      # เช่น [TOTEM_OF_UNDYING] — material ที่ห้ามมี timer เด็ดขาด
+    # Materials that may never receive a timer via /ti set, /ti add,
+    # /ti give or the menu. Items already carrying a timer are unaffected.
+    # Example: [TOTEM_OF_UNDYING, NETHERITE_CHESTPLATE]
+    materials: []
 
-# Integration กับปลั๊กอินอื่น (2.6.0+) — ตรวจจับอัตโนมัติ, ปิดรายตัวได้
-Hooks:
-  mmoitems: true
-  itemsadder: true
-  oraxen: true
-  nexo: true
-  executableitems: true
-  slimefun: true
-  ecoitems: true
-  crazycrates:
-    enabled: true
-    auto_timer: ""                     # เช่น "7d" = ของจาก crate หมดอายุอัตโนมัติ ("" = ปิด)
-  shopkeepers:
-    enabled: true
-    auto_timer: ""                     # เช่น "30d" = ของที่ซื้อจากร้านหมดอายุอัตโนมัติ ("" = ปิด)
+# Hooks (self-healing): every integration can be disabled with
+# Hooks.<id>: false. 3.1+ adds QuickShop, zAuctionHouse,
+# CrazyAuctions and zShop - when installed, their sell/list events
+# are cancelled for timed items (set the hook to false to allow
+# selling there).
 ```
+<!-- END:sync-readme:config -->
 
 </details>
 
@@ -415,14 +581,14 @@ public void onStart(ItemTimerStartEvent event) { ... }  // lifetime เริ่
 
 ```java
 TimedItemAPI.isTimed(item)                // มี timer ไหม
-TimedItemAPI.getType(item)                // "expire" | "lifetime" | "paused" | null
+TimedItemAPI.getType(item)                // "expire" | "lifetime" | "paused" | "playtime" | "held" | null
 TimedItemAPI.getRemainingSeconds(item)
 TimedItemAPI.setLifetime(item, 3600)      // throw IllegalArgumentException ถ้า material อยู่ใน blacklist
 TimedItemAPI.setExpiryFromNow(item, 600)  // เช่นเดียวกัน
 TimedItemAPI.pause(item) / resume(item) / clear(item)
 ```
 
-**PlaceholderAPI** (soft-depend — ไม่มี PAPI ก็รันปกติ): `%timeditem_remaining%` (raw วินาที) · `%timeditem_time%` (pretty) · `%timeditem_type%` · `%timeditem_date%` · `%timeditem_itemid%` (2.6.0+: `plugin:id` ของ item custom หรือชื่อ material) — อ้างจากไอเทมในมือหลัก
+**PlaceholderAPI** (soft-depend — ไม่มี PAPI ก็รันปกติ): `%timeditem_remaining%` (raw วินาที, alias `%timeditem_seconds%`) · `%timeditem_time%` (pretty) · `%timeditem_type%` · `%timeditem_date%` · `%timeditem_itemid%` (2.6.0+: `plugin:id` ของ item custom หรือชื่อ material) — อ้างจากไอเทมในมือหลัก
 
 ## 💾 การจัดเก็บข้อมูล
 
@@ -455,6 +621,13 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 | เวอร์ชัน | สรุป |
 |---|---|
+| **v3.1.2** | HuskSync compatibility — re-scan inventory ทันทีหลัง sync ข้ามเซิร์ฟ (`BukkitSyncCompleteEvent`) ปิดช่อง join scan วิ่งก่อน sync เสร็จ · timer ทุกชนิดอยู่รอดข้ามเซิร์ฟเองจาก raw NBT · ปิดได้ `Hooks.husksync: false` |
+| **v3.1.1** | zShop integration — บล็อกขายผ่าน `ZShopSellAllEvent` (`/zshop sellall` + sell GUI) · zAuctionHouse V4 — รองรับ `AuctionPreSellEvent` คู่กับ V3 candidates เดิม |
+| **v3.1.0** | สแกนเข้า shulker ซ้อนได้ 1 ชั้น (container scan · `/ti find` · anti-hide) · restore ข้ามเซิร์ฟ network mode (`/ti restore <player>` อ่านจาก DB ทุกเซิร์ฟ) · auto-return ให้เจ้าของ (`/ti give` ประทับ owner ใน NBT) · บล็อกขาย timed item บน QuickShop / zAuctionHouse / CrazyAuctions |
+| **v3.0.0** | Visual decay stages — ชื่อไอเทมเปลี่ยนสี + glow ตามเวลาที่เหลือ · hologram countdown เหนือไอเทมบนพื้น (1.19.4+, ปิดบน Folia) · live lore countdown ทุกวินาที (1.14+) · Admin GUI `/ti admin` · `/ti check <player>` · container scan (`open`/`periodic`/`both`) + anti-hide กันยัดของใกล้หมดอายุลงตู้ |
+| **v2.9.0** | ประเภท timer ใหม่ 2 แบบ — **playtime** นับเฉพาะตอนเจ้าของออนไลน์ (`/ti set playtime 10h`) และ **held** นับเฉพาะตอนถือ/สวมใส่ (`/ti set held 30m`) · give tokens `playtime:`/`held:` · renewal token ต่ออายุได้ทุกประเภท |
+| **v2.8.0** | Expiry transformation — ของหมดอายุกลายเป็นอีกชิ้น (`transform:<key>`, ผลลัพธ์ vanilla หรือ custom ก็ได้, API `getReplacement`) · grace period ช่วงสุดท้ายใช้ของไม่ได้ · renewal token ต่ออายุ · restore reminder ตอน join · Discord webhook แบบ embed |
+| **v2.7.0** | ฐานข้อมูล 4 แบบ (`flat`/`sqlite`/`mysql`/`mongodb`) พร้อม import recovery.log อัตโนมัติ · item UID ใน NBT · `/ti find` ค้นทั้งเซิร์ฟ · `/ti stats` สถิติรายวัน · `/ti audit` ประวัติการกระทำ |
 | **v2.6.0** | Integration 9 ปลั๊กอิน — `/ti give <player> <plugin:id> <time>` (MMOItems/ItemsAdder/Oraxen/Nexo/ExecutableItems/Slimefun/EcoItems/CrazyCrates) · auto-timer ร้านค้า Shopkeepers + crate CrazyCrates (`Hooks.*`) · `{item}` ใน webhook + `%timeditem_itemid%` โชว์ของ custom จริง |
 | **v2.5.0** | ระบบ debug & diagnostics — `/ti debug on\|off\|export` · จับ log 500 แถว · verbose `[Debug]` log · รายงานบั๊ก (ไม่มีข้อมูล webhook URL/item/player) |
 | **v2.4.1** | Ground expiry บน Folia สมบูรณ์ (per-entity scheduler tracking — spawn/chunk load/interact) |
@@ -463,6 +636,7 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 | **v2.3.0** | Tab completion · `/ti give` · recovery + restore GUI · warning stages · material blacklist · update checker |
 | **v2.2.0** | PDC storage · GUI menu · event API + facade · PlaceholderAPI · หมดอายุบนพื้น/เฟรม · unit tests · MIT License |
 | **v2.1.0** | bStats · CI · pause/resume · เตือนล่วงหน้า · particle/เสียง/actionbar · expiry_commands |
+| **v2.0.0** | Refactor ใหม่ทั้งหมดจากปลั๊กอินต้นฉบับปี 2019 — jar เดียว Java 8 bytecode, รองรับ MC 1.13 ถึงปัจจุบัน, compat ผ่าน reflection shims |
 
 ดูรายละเอียดทั้งหมดได้ที่ [CHANGELOG.md](CHANGELOG.md)
 
