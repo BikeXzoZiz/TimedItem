@@ -9,3 +9,10 @@ dependency-reduced-pom.xml
 *.log
 .zcode/
 __pycache__/
+
+# test infrastructure (local artifacts, never commit)
+testing/servers/
+testing/real-hooks/
+testing/fakehooks/out/
+testing/fakehooks/build/
+testing/harness/target/

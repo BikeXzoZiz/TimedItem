@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>me.albert</groupId>
+    <artifactId>timeditem-test-harness</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>TimedItemTestHarness</name>
+    <description>In-game test scenarios for TimedItem, driven from the console.</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>8</maven.compiler.release>
+        <!-- overridden by the matrix runner to match the main pom version -->
+        <timeditem.version>3.0.0</timeditem.version>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>spigotmc-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+        </repository>
+        <repository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/groups/public/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!-- The plugin under test: provides TimeLore, HookManager, the api
+             package and SchedulerCompat's detection. Provided - the server
+             supplies the real jar at runtime. -->
+        <dependency>
+            <groupId>me.albert</groupId>
+            <artifactId>timeditem</artifactId>
+            <version>${timeditem.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.spigotmc</groupId>
+            <artifactId>spigot-api</artifactId>
+            <version>1.13.2-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>TimedItemTestHarness-${project.version}</finalName>
+    </build>
+</project>

@@ -1,0 +1,11 @@
+name: TimedItemTestHarness
+main: me.albert.timeditem.harness.HarnessPlugin
+version: '1.0.0'
+api-version: '1.13'
+folia-supported: true
+depend: [TimedItem]
+description: Console-driven test scenarios for TimedItem.
+commands:
+  titest:
+    description: Run TimedItem test scenarios
+    usage: /titest run <scenario|all> | /titest list
