@@ -39,7 +39,8 @@ public final class FoliaGroundExpiry implements Listener {
     private final TimedItemPlugin plugin;
     /** Entity UUID -> its repeating expiry check. */
     private final Map<UUID, SchedulerCompat.Handle> tracked = new ConcurrentHashMap<UUID, SchedulerCompat.Handle>();
-    private long periodTicks = 200L;
+    // written by start() from the reload thread, read on Folia region threads
+    private volatile long periodTicks = 200L;
     private volatile boolean running;
 
     public FoliaGroundExpiry(TimedItemPlugin plugin) {

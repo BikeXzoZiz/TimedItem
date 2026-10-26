@@ -77,6 +77,9 @@ final class CrazyCratesAdapter implements CustomItemAdapter {
                 }
             }
             Object prize = prizeMethod == null ? null : HookReflection.invoke(prizeMethod, crate, idParts[1]);
+            if (prize == null) {
+                return null;
+            }
             Method getItem = HookReflection.findGetter(prize.getClass(), "item", ItemStack.class);
             Object stack = getItem == null ? null : HookReflection.invoke(getItem, prize);
             return stack instanceof ItemStack ? ((ItemStack) stack).clone() : null;

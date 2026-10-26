@@ -10,9 +10,10 @@ import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
@@ -35,6 +36,34 @@ public final class ContainerGuard implements Listener {
         this.plugin = plugin;
     }
 
+    // InventoryView changed from an abstract class to an interface in 1.21,
+    // so code compiled against the older API crashes with
+    // IncompatibleClassChangeError on direct view calls. These reflective
+    // accessors keep the compiled bytecode free of either layout.
+    private static final Method TOP_INVENTORY = viewAccessor("getTopInventory");
+    private static final Method BOTTOM_INVENTORY = viewAccessor("getBottomInventory");
+
+    private static Method viewAccessor(String name) {
+        try {
+            return Class.forName("org.bukkit.inventory.InventoryView").getMethod(name);
+        } catch (ReflectiveOperationException e) {
+            return null;
+        }
+    }
+
+    private static Inventory viewInventory(Object view, Method accessor) {
+        if (accessor == null) {
+            return null;
+        }
+        try {
+            return (Inventory) accessor.invoke(view);
+        } catch (IllegalAccessException e) {
+            return null;
+        } catch (InvocationTargetException e) {
+            return null;
+        }
+    }
+
     /** True when the open-mode container scan should run for this event. */
     private boolean openScanEnabled(PluginConfig config) {
         String mode = config.getContainerScanMode();
@@ -55,8 +84,8 @@ public final class ContainerGuard implements Listener {
         if (config.isIgnoreCreative() && player.getGameMode() == GameMode.CREATIVE) {
             return;
         }
-        Inventory top = event.getView().getTopInventory();
-        if (!(top.getHolder() instanceof org.bukkit.block.Container)) {
+        Inventory top = viewInventory(event.getView(), TOP_INVENTORY);
+        if (top == null || !(top.getHolder() instanceof org.bukkit.block.Container)) {
             return;
         }
         LocalDateTime now = LocalDateTime.now();
@@ -92,8 +121,9 @@ public final class ContainerGuard implements Listener {
         if (config.isIgnoreCreative() && player.getGameMode() == GameMode.CREATIVE) {
             return;
         }
-        InventoryView view = event.getView();
-        if (!(view.getTopInventory().getHolder() instanceof org.bukkit.block.Container)) {
+        Object view = event.getView();
+        Inventory top = viewInventory(view, TOP_INVENTORY);
+        if (top == null || !(top.getHolder() instanceof org.bukkit.block.Container)) {
             return; // no real container open
         }
         long threshold = config.getAntiHideBelowSeconds();
@@ -109,8 +139,9 @@ public final class ContainerGuard implements Listener {
             }
         }
         // shift-clicking from the player's own inventory into the container
+        Inventory bottom = viewInventory(view, BOTTOM_INVENTORY);
         if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
-                && event.getClickedInventory() == view.getBottomInventory()
+                && bottom != null && event.getClickedInventory() == bottom
                 && isBelowThreshold(event.getCurrentItem(), config, threshold)) {
             block(player, config, event.getCurrentItem());
             event.setCancelled(true);

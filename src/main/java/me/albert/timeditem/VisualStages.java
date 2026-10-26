@@ -95,7 +95,16 @@ public final class VisualStages {
             }
         }
         String stored = PdcCompat.readString(item, "stage");
-        int current = stored == null ? -1 : Integer.parseInt(stored);
+        int current = -1;
+        if (stored != null) {
+            try {
+                current = Integer.parseInt(stored);
+            } catch (NumberFormatException corrupted) {
+                // hand-edited or damaged tag: drop it so the next scan re-stages cleanly
+                PdcCompat.removeString(item, "stage");
+                DebugLog.verbose("Corrupt stage tag '" + stored + "' removed: " + corrupted);
+            }
+        }
         if (computed == current) {
             return;
         }

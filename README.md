@@ -65,7 +65,7 @@
 
 ## 🚀 เริ่มใช้ใน 1 นาที
 
-1. ดาวน์โหลด `TimedItem-3.1.2.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
+1. ดาวน์โหลด `TimedItem-3.1.3.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
 2. รีสตาร์ทเซิร์ฟเวอร์ — เสร็จ! (ค่า default ใช้ได้ทันที)
 3. ลองเลย:
 
@@ -621,6 +621,7 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 | เวอร์ชัน | สรุป |
 |---|---|
+| **v3.1.3** | แก้บั๊กล้วน — anti-hide/container open-scan ใช้งานได้บน 1.21+ (`InventoryView` class→interface) · visual stage ไม่พังเมื่อ PDC tag เสีย · write-back สี stage/นับถอยหลังไม่หายบนแพลตฟอร์มที่ให้สำเนา ItemStack · ปิด leak (`lastNotice`, webhook flush ตอนปิด, UpdateChecker socket) และแก้ race ของ StorageWriter ตอน disable |
 | **v3.1.2** | HuskSync compatibility — re-scan inventory ทันทีหลัง sync ข้ามเซิร์ฟ (`BukkitSyncCompleteEvent`) ปิดช่อง join scan วิ่งก่อน sync เสร็จ · timer ทุกชนิดอยู่รอดข้ามเซิร์ฟเองจาก raw NBT · ปิดได้ `Hooks.husksync: false` |
 | **v3.1.1** | zShop integration — บล็อกขายผ่าน `ZShopSellAllEvent` (`/zshop sellall` + sell GUI) · zAuctionHouse V4 — รองรับ `AuctionPreSellEvent` คู่กับ V3 candidates เดิม |
 | **v3.1.0** | สแกนเข้า shulker ซ้อนได้ 1 ชั้น (container scan · `/ti find` · anti-hide) · restore ข้ามเซิร์ฟ network mode (`/ti restore <player>` อ่านจาก DB ทุกเซิร์ฟ) · auto-return ให้เจ้าของ (`/ti give` ประทับ owner ใน NBT) · บล็อกขาย timed item บน QuickShop / zAuctionHouse / CrazyAuctions |
@@ -677,6 +678,14 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 - recovery.log: line format อยู่ที่ `RecoveryFormat` (pure, unit tested) — decode อยู่ที่ `ItemSerializer.encode/fromBase64`
 - ข้อความ/GUI โหลดจาก `lang/messages_<language>.yml` (self-heal จาก default, `LanguageFilesTest` กัน key หาย/หน่วยไม่ตรงกัน)
 - bStats shaded + relocated (`me.albert.timeditem.libs.bstats`); tests: JUnit 5 ผ่าน surefire
+
+## 🧪 การทดสอบ
+
+ทดสอบ 3 ชั้น (รายละเอียดเต็มที่ [testing/README.md](testing/README.md)):
+
+1. **Unit tests** — `mvn test`: ตรรกะ pure 18 ไฟล์ (DurationParser, TimeLore, HookToken, HookReflection, VisualStages, TrackedItems, SchedulerCompat, storage, language files ฯลฯ)
+2. **In-game harness** — ปลั๊กอิน `TimedItemTestHarness` รัน 10 scenarios บน server จริงจาก console (`/titest run all`): boot, lore roundtrip + PDC, API guard rails, ground expiry, transform, container scan, holograms, Folia gates, hooks roundtrip, auto-timer — พ่อผลเป็น `[TITEST] PASS/FAIL` ลง log
+3. **Test matrix** — `bash testing/run-matrix.sh all`: บูต server จริง **4 แพลตฟอร์ม** (Paper 1.21.x / Folia / Purpur / Paper 1.20.x) headless พร้อม **FakeHooks stubs ครบทุก integration** (MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, ExecutableItems, Slimefun, EcoItems, Shopkeepers, CrazyCrates) รัน harness ทุก lane แล้วสรุปตารางผ่าน/พัง — lane `hooks-lane` รันซ้ำกับ jar ปลั๊กอินจริงที่วางใน `testing/real-hooks/` ได้
 
 ---
 

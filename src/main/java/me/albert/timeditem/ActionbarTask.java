@@ -19,7 +19,6 @@ import java.time.LocalDateTime;
 public final class ActionbarTask implements Runnable {
 
     private final TimedItemPlugin plugin;
-    private static boolean broken;
 
     public ActionbarTask(TimedItemPlugin plugin) {
         this.plugin = plugin;
@@ -27,7 +26,7 @@ public final class ActionbarTask implements Runnable {
 
     @Override
     public void run() {
-        if (broken) {
+        if (ActionbarCompat.isBroken()) {
             return;
         }
         PluginConfig config = plugin.pluginConfig();
@@ -73,10 +72,6 @@ public final class ActionbarTask implements Runnable {
         }
         String text = PluginConfig.color(config.getActionbarFormat()
                 .replace("{time}", TimeLore.formatDuration(remaining, config)));
-        try {
-            ActionbarCompat.send(player, text);
-        } catch (Throwable t) {
-            broken = true;
-        }
+        ActionbarCompat.send(player, text);
     }
 }

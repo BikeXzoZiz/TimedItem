@@ -74,6 +74,11 @@ public final class DebugLog {
         return enabled;
     }
 
+    /** The plugin logger for static classes that need a one-time warning. */
+    static Logger logger() {
+        return pluginLogger;
+    }
+
     public static void setEnabled(boolean value) {
         enabled = value;
     }

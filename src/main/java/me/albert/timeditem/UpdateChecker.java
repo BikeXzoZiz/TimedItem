@@ -74,8 +74,9 @@ public final class UpdateChecker implements Listener {
 
     /** Fetches the latest release tag from the GitHub API, or null on any failure. */
     private String fetchLatestTag(String repository) {
+        HttpURLConnection connection = null;
         try {
-            HttpURLConnection connection = (HttpURLConnection) new URL(
+            connection = (HttpURLConnection) new URL(
                     "https://api.github.com/repos/" + repository + "/releases/latest").openConnection();
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
@@ -84,19 +85,23 @@ public final class UpdateChecker implements Listener {
             if (connection.getResponseCode() != 200) {
                 return null;
             }
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8));
-            StringBuilder json = new StringBuilder();
-            char[] buffer = new char[1024];
-            int read;
-            while ((read = reader.read(buffer)) != -1) {
-                json.append(buffer, 0, read);
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                StringBuilder json = new StringBuilder();
+                char[] buffer = new char[1024];
+                int read;
+                while ((read = reader.read(buffer)) != -1) {
+                    json.append(buffer, 0, read);
+                }
+                Matcher matcher = TAG_NAME.matcher(json.toString());
+                return matcher.find() ? matcher.group(1) : null;
             }
-            reader.close();
-            Matcher matcher = TAG_NAME.matcher(json.toString());
-            return matcher.find() ? matcher.group(1) : null;
         } catch (Exception e) {
             return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 

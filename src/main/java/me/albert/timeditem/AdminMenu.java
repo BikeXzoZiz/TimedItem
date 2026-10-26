@@ -14,9 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The /ti admin GUI (3.0+): an overview of every timed item the last
@@ -33,8 +31,6 @@ public final class AdminMenu implements Listener {
     private static final int NEXT_SLOT = 53;
 
     private final TimedItemPlugin plugin;
-    /** Filter typed per admin, kept for page navigation. */
-    private final Map<UUID, String> filters = new ConcurrentHashMap<UUID, String>();
 
     public AdminMenu(TimedItemPlugin plugin) {
         this.plugin = plugin;
@@ -55,7 +51,6 @@ public final class AdminMenu implements Listener {
     public void open(Player admin, int page, String filter) {
         PluginConfig config = plugin.pluginConfig();
         String clean = filter == null ? "" : filter.trim();
-        filters.put(admin.getUniqueId(), clean);
         List<TrackedItems.Tracked> entries = plugin.trackedItems().snapshot(clean);
         int pages = Math.max(1, (entries.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         page = Math.max(0, Math.min(page, pages - 1));

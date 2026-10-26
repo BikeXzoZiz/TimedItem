@@ -2,6 +2,26 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [Unreleased]
+
+### Added
+- **ระบบทดสอบครบชุด 3 ชั้น** (โฟลเดอร์ `testing/` + `testing/README.md`) — unit tests เพิ่ม 5 ไฟล์ (VisualStages, TrackedItems, HookReflection, SchedulerCompat + ขยาย HookToken) รวม 18 ไฟล์ · ปลั๊กอินทดสอบในเกม `TimedItemTestHarness` รัน 10 scenarios จาก console แล้วพ่อ `[TITEST] PASS/FAIL` ลง log (boot, lore roundtrip + PDC, API guard rails, ground expiry, transform, container scan, holograms, Folia gates, hooks roundtrip, auto-timer) · **test matrix `testing/run-matrix.sh`** บูต server จริง 4 แพลตฟอร์ม (Paper 1.21.x / Folia / Purpur / Paper 1.20.x) headless พร้อม **FakeHooks stubs จำลอง API ทุก integration** (MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, ExecutableItems, Slimefun, EcoItems, Shopkeepers, CrazyCrates) แล้วรัน harness ทุก lane สรุปตารางผ่าน/พัง · lane `hooks-lane` รันซ้ำกับ jar ปลั๊กอินจริงจาก `testing/real-hooks/`
+
+## [3.1.3] - 2026-10-27
+
+### Fixed
+- **รองรับเซิร์ฟเวอร์ 1.21+ ที่ `InventoryView` กลายเป็น interface** — anti-hide และ container open-scan เรียก `getTopInventory()/getBottomInventory()` ตรง ๆ โดยคอมไพล์กับ API 1.13 (ยุค class) → บน 1.21+ ที่ API เปลี่ยนเป็น interface จะโดน `IncompatibleClassChangeError` ทันทีที่ event เกิด (ฟีเจอร์ทั้งสองใช้ไม่ได้บนเซิร์ฟใหม่) — เปลี่ยนเป็น reflective accessor แคชครั้งเดียว รองรับทั้งสองยุค
+- **Visual decay stages ไม่พังเมื่อ tag เสีย** — `timeditem:stage` ใน PDC ที่ถูกแก้มือ/เสียหาย (`Integer.parseInt` ไม่ผ่าน) เคยโยน NumberFormatException ใส่รอบสแกน — ตอนนี้จับได้ ลบ tag ทิ้งแล้ว re-stage ใหม่เอง + log verbose
+- **เขียนกลับ inventory ทุกครั้งที่ stage/lifetime/นับถอยหลังเปลี่ยน** — write-back เดิมผูกกับเคส expire/lifetime เท่านั้น และเคส playtime/held เขียนกลับสำเนาเก่า (`inv.getItem(slot)`) — บนแพลตฟอร์มที่ให้สำเนาของ ItemStack สี stage/glow กับเวลาที่นับแล้วเคยหายเงียบ ๆ
+- **StorageWriter ไม่โยน RejectedExecutionException ตอนปิดเซิร์ฟ** — race ระหว่าง flag check กับ `shutdown()` ตอน disable (expiry บน region thread แตะคิวพอดีจังหวะ)
+- **ล้าง state ค้างตอนผู้เล่นออก/ปิดปลั๊กอิน** — cooldown แจ้งเตือน (`lastNotice`) ไม่เคยล้างตอน quit (รั่ว 1 แถว/คน); filter map ของ `/ti admin` เป็น dead state เขียนแต่ไม่เคยอ่าน — ลบทิ้ง
+- **Folia: period ของ ground-expiry tracking ข้าม thread แบบ non-volatile** — เขียนจาก reload thread อ่านบน region threads ตอน startTracking มองไม่เห็นค่าใหม่หลัง reload ได้
+- **Actionbar ดับเงียบเมื่อ API fail** — ตอน bungee-chat actionbar โยน error ครั้งแรก ปลั๊กอินปิดฟีเจอร์ไปเงียบ ๆ ไม่ log อะไรเลย — ตอนนี้ flag เป็น volatile + log WARNING ครั้งเดียว และรวม flag ไว้ที่ `ActionbarCompat` ที่เดียว (ลบ flag ซ้ำใน `ActionbarTask` ที่ไม่มีวันถูกเซ็ต)
+- **Discord webhook flush ก่อนปิด** — `close()` เดิมแค่ `shutdown()` ไม่รอ คิวแจ้งเตือนที่ค้างตอน stop เซิร์ฟอาจหาย (ตอนนี้ `awaitTermination` 10s เหมือน StorageWriter)
+- **UpdateChecker ปิด connection ทุก path** — เดิม early-return ตอน status ไม่ใช่ 200 กับเคส exception ปล่อย reader/connection ไม่ปิด (รั่ว socket จนกว่า GC)
+- **CrazyCrates: prize probe ไม่เจอไม่ NPE** — `prize.getClass()` เมื่อ prize เป็น null เคยกลืน NPE ลง catch เป็น verbose log เท่านั้น
+- **test matrix (`testing/run-matrix.sh`) อ่านเวอร์ชันจาก pom.xml เอง** — เดิม hardcode 3.0.0 ทำให้รันเทสต์ด้วย jar เก่าโดยไม่รู้ตัว
+
 ## [3.1.2] - 2026-10-27
 
 ### Added

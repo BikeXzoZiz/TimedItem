@@ -354,7 +354,9 @@ public final class ExpiryListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        warned.remove(event.getPlayer().getUniqueId());
+        java.util.UUID uuid = event.getPlayer().getUniqueId();
+        warned.remove(uuid);
+        lastNotice.remove(uuid);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -423,10 +425,13 @@ public final class ExpiryListener implements Listener {
             VisualStages.apply(plugin, item, info, config);
             final int slot = i;
             boolean armor = i >= ARMOR_START && i <= ARMOR_END;
-            boolean changed = handleInfo(info, item, player, allowStart,
+            handleInfo(info, item, player, allowStart,
                     () -> inv.setItem(slot, null), armor, config, now);
-            if (changed && inv.getItem(slot) != null) {
-                inv.setItem(slot, inv.getItem(slot)); // write back in case the stack was a copy
+            if (inv.getItem(slot) != null) {
+                // write back unconditionally: on platforms that hand out
+                // copies, the visual stage and lifetime mutations only
+                // persist through this call
+                inv.setItem(slot, item);
             }
             // timed items parked inside a shulker box in the player's inventory
             plugin.expiryService().expireInsideShulker(item, player,
@@ -496,7 +501,7 @@ public final class ExpiryListener implements Listener {
                     TimeLore.applyHeld(item, config, remaining - delta);
                 }
                 if (inv.getItem(slot) != null) {
-                    inv.setItem(slot, inv.getItem(slot)); // write back in case the stack was a copy
+                    inv.setItem(slot, item); // write back in case the stack was a copy
                 }
             }
         }

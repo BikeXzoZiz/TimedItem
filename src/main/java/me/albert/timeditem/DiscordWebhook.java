@@ -10,6 +10,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Posts expiry notifications to a Discord webhook. Needs no external
@@ -91,6 +92,14 @@ public final class DiscordWebhook {
     /** Stops the background sender after flushing pending posts. Call on disable. */
     public void close() {
         poster.shutdown();
+        try {
+            if (!poster.awaitTermination(10, TimeUnit.SECONDS)) {
+                poster.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            poster.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     /** JSON body of the webhook request (pure - unit tested). */

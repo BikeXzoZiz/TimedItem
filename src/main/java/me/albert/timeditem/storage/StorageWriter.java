@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -99,12 +100,17 @@ public final class StorageWriter {
         if (closed) {
             return;
         }
-        writer.execute(() -> {
-            try {
-                task.run();
-            } catch (Throwable t) {
-                logger.log(Level.WARNING, "Storage write failed: " + t, t);
-            }
-        });
+        try {
+            writer.execute(() -> {
+                try {
+                    task.run();
+                } catch (Throwable t) {
+                    logger.log(Level.WARNING, "Storage write failed: " + t, t);
+                }
+            });
+        } catch (RejectedExecutionException shuttingDown) {
+            // close() ran between the flag check and the enqueue; the
+            // write is lost with the rest of the shutdown work
+        }
     }
 }
