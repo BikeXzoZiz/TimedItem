@@ -17,6 +17,8 @@ final class ItemsAdderAdapter implements CustomItemAdapter {
     private final Method fromStack;
     private final Method fromId;
     private final Method getItemStack;
+    private final Method getId;
+    private final Method getNamespace;
 
     ItemsAdderAdapter() {
         this.customStack = HookReflection.findClass("dev.lone.itemsadder.api.CustomStack");
@@ -26,6 +28,12 @@ final class ItemsAdderAdapter implements CustomItemAdapter {
                 : HookReflection.findMethod(customStack, "getInstance", String.class);
         this.getItemStack = customStack == null ? null
                 : HookReflection.findMethod(customStack, "getItemStack");
+        // resolved once here instead of scanning getMethods() on every
+        // identify - CustomStack.getInstance always hands out the same class
+        this.getId = customStack == null ? null
+                : HookReflection.findAnyMethod(customStack, "getId", 0);
+        this.getNamespace = customStack == null ? null
+                : HookReflection.findAnyMethod(customStack, "getNamespace", 0);
     }
 
     @Override
@@ -55,12 +63,10 @@ final class ItemsAdderAdapter implements CustomItemAdapter {
             }
             // getId() returns "namespace:id" on current versions; older
             // builds only carry the bare id next to getNamespace()
-            Method getId = HookReflection.findAnyMethod(stack.getClass(), "getId", 0);
             String id = getId == null ? null : (String) HookReflection.invoke(getId, stack);
             if (id != null && id.contains(":")) {
                 return id;
             }
-            Method getNamespace = HookReflection.findAnyMethod(stack.getClass(), "getNamespace", 0);
             String namespace = getNamespace == null ? null : (String) HookReflection.invoke(getNamespace, stack);
             return namespace == null || namespace.isEmpty() ? id : namespace + ":" + id;
         } catch (Throwable t) {

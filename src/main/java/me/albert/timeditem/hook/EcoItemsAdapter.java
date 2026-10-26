@@ -21,6 +21,12 @@ final class EcoItemsAdapter implements CustomItemAdapter {
     private final Method getById;
     private final Method values;
 
+    // resolved lazily on the first walked entry - the EcoItem impl class
+    // is only known once the registry is iterated, and identifying walks
+    // every entry, so a per-entry getMethods() scan multiplies fast
+    private volatile Method itemGetter;
+    private volatile Method idGetter;
+
     EcoItemsAdapter() {
         Class<?> registryClass = HookReflection.findClass("com.willfp.ecoitems.items.EcoItems");
         Object registry = registryClass == null ? null
@@ -68,7 +74,7 @@ final class EcoItemsAdapter implements CustomItemAdapter {
                 if (entry instanceof ItemStack) {
                     stack = (ItemStack) entry;
                 } else {
-                    Method getItem = HookReflection.findGetter(entry.getClass(), "item", ItemStack.class);
+                    Method getItem = cachedItemGetter(entry);
                     Object got = getItem == null ? null : HookReflection.invoke(getItem, entry);
                     stack = got instanceof ItemStack ? (ItemStack) got : null;
                 }
@@ -77,7 +83,7 @@ final class EcoItemsAdapter implements CustomItemAdapter {
                 }
                 if (stack.getType() == item.getType()
                         && name != null && name.equals(displayName(stack))) {
-                    Method getId = HookReflection.findGetter(entry.getClass(), "id", String.class);
+                    Method getId = cachedIdGetter(entry);
                     String found = getId == null ? null : (String) HookReflection.invoke(getId, entry);
                     if (found != null && !found.isEmpty()) {
                         return found;
@@ -101,13 +107,37 @@ final class EcoItemsAdapter implements CustomItemAdapter {
             if (ecoItem == null) {
                 return null;
             }
-            Method getItem = HookReflection.findGetter(ecoItem.getClass(), "item", ItemStack.class);
+            Method getItem = cachedItemGetter(ecoItem);
             Object stack = getItem == null ? null : HookReflection.invoke(getItem, ecoItem);
             return stack instanceof ItemStack ? ((ItemStack) stack).clone() : null;
         } catch (Throwable t) {
             DebugLog.verbose("EcoItems build failed: " + t);
             return null;
         }
+    }
+
+    /** Cached EcoItem#item getter - the impl class is stable across entries. */
+    private Method cachedItemGetter(Object entry) {
+        Method cached = itemGetter;
+        if (cached == null) {
+            cached = HookReflection.findGetter(entry.getClass(), "item", ItemStack.class);
+            if (cached != null) {
+                itemGetter = cached;
+            }
+        }
+        return cached;
+    }
+
+    /** Cached EcoItem#id getter, same lazy pattern as {@link #cachedItemGetter(Object)}. */
+    private Method cachedIdGetter(Object entry) {
+        Method cached = idGetter;
+        if (cached == null) {
+            cached = HookReflection.findGetter(entry.getClass(), "id", String.class);
+            if (cached != null) {
+                idGetter = cached;
+            }
+        }
+        return cached;
     }
 
     /** Stripped display name, or null when the stack has none. */

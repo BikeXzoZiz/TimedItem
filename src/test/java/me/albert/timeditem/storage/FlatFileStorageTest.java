@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -98,6 +99,7 @@ class FlatFileStorageTest {
                 "item-uid", "mmoitems:SWORD", "1d|h\\x|p"));
         storage.appendAudit(new AuditRecord(2000L, null, "console", AuditRecord.RESTORE,
                 "Steve", null, "DIAMOND", null));
+        storage.close(); // write-behind: flush so the reopen can read it
 
         FlatFileStorage reopened = storage();
         List<AuditRecord> page = reopened.auditPage(10, 0);
@@ -118,6 +120,7 @@ class FlatFileStorageTest {
         storage.incrementExpired("2026-10-26", "DIAMOND");
         storage.incrementExpired("2026-10-25", "ELYTRA");
         storage.incrementExpired("2026-10-20", "ELYTRA");
+        storage.close(); // write-behind: flush so the reopen can read it
 
         Map<String, Map<String, Long>> since25 = storage.expiredStats("2026-10-25");
         assertEquals(2, since25.size());
@@ -125,5 +128,42 @@ class FlatFileStorageTest {
 
         FlatFileStorage reopened = storage();
         assertEquals(2L, reopened.expiredStats("1970-01-01").get("2026-10-26").get("DIAMOND"));
+    }
+
+    @Test
+    void mutationsStayInMemoryUntilFlush() throws Exception {
+        FlatFileStorage storage = storage();
+        storage.insertRecovery(new RecoveryRecord("id-1", now(), "uuid-1", "Steve",
+                "world", "nbt", "QUJD"));
+        storage.appendAudit(new AuditRecord(1000L, "uuid-1", "Steve", AuditRecord.SET,
+                "Bob", null, "DIAMOND", null));
+        storage.incrementExpired("2026-10-27", "DIAMOND");
+        // write-behind: mutations are visible in memory but not on disk
+        assertEquals(1, storage.loadRecoveryFor("uuid-1", 10).size());
+        assertFalse(Files.exists(folder.resolve("recovery.log")));
+        assertFalse(Files.exists(folder.resolve("audit.log")));
+        assertFalse(Files.exists(folder.resolve("stats.yml")));
+
+        storage.flush();
+        assertTrue(Files.exists(folder.resolve("recovery.log")));
+        assertTrue(Files.exists(folder.resolve("audit.log")));
+        assertTrue(Files.exists(folder.resolve("stats.yml")));
+
+        // in-memory state is unchanged by flushing
+        assertEquals(1, storage.loadRecoveryFor("uuid-1", 10).size());
+        assertEquals(1L, storage.expiredStats("1970-01-01").get("2026-10-27").get("DIAMOND"));
+    }
+
+    @Test
+    void closeFlushesPendingChanges() {
+        FlatFileStorage storage = storage();
+        storage.insertRecovery(new RecoveryRecord("id-1", now(), null, "Steve",
+                "world", "nbt", "QUJD"));
+        storage.incrementExpired("2026-10-27", "DIAMOND");
+        storage.close();
+
+        FlatFileStorage reopened = storage();
+        assertEquals(1, reopened.loadRecovery().size());
+        assertEquals(1L, reopened.expiredStats("1970-01-01").get("2026-10-27").get("DIAMOND"));
     }
 }

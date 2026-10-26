@@ -36,6 +36,10 @@ public final class MongoStorage implements Storage {
     private final long cutoffMillis;
     private final int maxItems;
     private final int auditHistory;
+    /** Same amortization as SqlStorage: count+trim round trips every 64th insert. */
+    private static final int AUDIT_TRIM_EVERY = 64;
+    /** Audit inserts since the last trim; only touched from the writer thread. */
+    private int auditSinceTrim;
 
     public MongoStorage(String uri, String databaseName, Logger logger, long cutoffMillis,
                         int maxItems, int auditHistory) {
@@ -139,6 +143,14 @@ public final class MongoStorage implements Storage {
                 .append("item_uid", record.getItemUid())
                 .append("item_id", record.getItemId())
                 .append("details", record.getDetails()));
+        // countDocuments + border query + deleteMany are up to three round
+        // trips - amortize them to every AUDIT_TRIM_EVERYth insert; the
+        // collection may exceed the cap by up to that many documents,
+        // which auditPage never shows (it sorts newest first with a limit)
+        if (++auditSinceTrim < AUDIT_TRIM_EVERY) {
+            return;
+        }
+        auditSinceTrim = 0;
         long count = audit.countDocuments();
         if (count > auditHistory) {
             Document border = audit.find()

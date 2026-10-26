@@ -7,6 +7,18 @@
 ### Added
 - **ระบบทดสอบครบชุด 3 ชั้น** (โฟลเดอร์ `testing/` + `testing/README.md`) — unit tests เพิ่ม 5 ไฟล์ (VisualStages, TrackedItems, HookReflection, SchedulerCompat + ขยาย HookToken) รวม 18 ไฟล์ · ปลั๊กอินทดสอบในเกม `TimedItemTestHarness` รัน 10 scenarios จาก console แล้วพ่อ `[TITEST] PASS/FAIL` ลง log (boot, lore roundtrip + PDC, API guard rails, ground expiry, transform, container scan, holograms, Folia gates, hooks roundtrip, auto-timer) · **test matrix `testing/run-matrix.sh`** บูต server จริง 4 แพลตฟอร์ม (Paper 1.21.x / Folia / Purpur / Paper 1.20.x) headless พร้อม **FakeHooks stubs จำลอง API ทุก integration** (MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, ExecutableItems, Slimefun, EcoItems, Shopkeepers, CrazyCrates) แล้วรัน harness ทุก lane สรุปตารางผ่าน/พัง · lane `hooks-lane` รันซ้ำกับ jar ปลั๊กอินจริงจาก `testing/real-hooks/`
 
+## [3.1.4] - 2026-10-27
+
+### Changed (ประสิทธิภาพ)
+- **แคช reflection ครั้งเดียวใน hot path ทั้ง 6 จุด** — จุดที่ถูกเรียกถี่ที่สุดของทุก hook เคยสแกน `getMethods()` ทั้งชุดใหม่ทุกครั้งที่ถูกเรียก: identify ของ ItemsAdder/Slimefun (`getId`/`getNamespace`), **EcoItems ที่เดิน registry ทั้งชุดต่อ 1 identify (จุดแพงสุด)**, auto-timer ของ Shopkeepers/CrazyCrates ที่สแกน 2-3 ครั้งต่อ event, และ `ParticleCompat` ที่ `Class.forName` + `getField` ต่อ particle ที่ปล่อยทุกครั้งที่ expire — ตอนนี้ resolve ครั้งเดียว (ตอน construct / ตอน event แรก / แคชต่อชื่อพร้อม negative cache สำหรับชื่อที่ผิด) พฤติกรรม degrade เมื่อ hook ไม่ตรงเวอร์ชันเหมือนเดิมครบ
+- **FlatFile storage เปลี่ยนเป็น write-behind** — เดิมทุกไอเทมที่ expire เขียน `recovery.log` + `stats.yml` ใหม่ทั้งไฟล์ และทุก audit event เขียน `audit.log` ใหม่ทั้งไฟล์ — ตอนนี้การเปลี่ยนแปลง mark dirty ในหน่วยความจำก่อน แล้ว flush ลงดิสก์เร็วสุด 1 ครั้ง/วินาที (+ flush ก่อนปิดปลั๊กอิน) ตัด disk churn ตอน expire เป็นชุดใหญ่; ข้อแลกเปลี่ยน: ถ้าเซิร์ฟเวอร์ crash แบบ hard อาจเสียข้อมูลวินาทีสุดท้าย (ปิดเซิร์ฟแบบปกติไม่เสีย); `stats.yml` เขียนแบบ atomic (temp + rename) เหมือนไฟล์ `.log` แล้ว ปิดช่องไฟล์ torn ตอนตายกลางเขียน; `/ti reload` จะ flush ของค้างก่อนโหลดใหม่ ไม่มีข้อมูล in-memory หาย
+- **SQL/MongoDB: trim ตาราง audit ทุก 64 inserts แทนทุก insert** — เดิม INSERT หนึ่งครั้งตามด้วย `DELETE` เต็มตาราง (SQL) หรือ `countDocuments` + border query + `deleteMany` สูงสุด 3 round trips (Mongo) ทุกครั้ง — ตอนนี้ครอบด้วย counter ทุก 64 inserts ตารางเกิน cap ได้ไม่เกิน 64 แถวชั่วคราว ซึ่ง `/ti audit` ไม่มีทางเห็น (อ่าน newest-first พร้อม LIMIT)
+- **NBT encode ของ recovery ย้ายไป writer thread** — ตอนไอเทมหมดอายุ serialize ไอเทมเป็น NBT (งานหนักสุดใน pipeline โดยเฉพาะ shulker) เคยรันบน main/region thread — ตอนนี้ expiry thread แค่ clone สำเนาจาง ๆ แล้ว encode + บันทึกบน background thread (entry โผล่ใน restore GUI ช้าลงไม่กี่มิลลิวินาที)
+
+### Technical
+- `Storage` เพิ่ม `flush()` (default no-op — SQL/Mongo เขียนทันทีอยู่แล้ว); `StorageWriter` เพิ่ม flusher thread ส่ง flush เข้าคิว writer ได้มากสุด 1 ครั้ง/วินาที (CAS guard — burst ทั้งชุดรวมเป็น flush เดียว)
+- unit tests 116 ชุดผ่าน (เพิ่ม ParticleCompat resolve/cache, FlatFile flush semantics + close-flush, SQLite audit trim amortize) · matrix paper lane ผ่าน
+
 ## [3.1.3] - 2026-10-27
 
 ### Fixed

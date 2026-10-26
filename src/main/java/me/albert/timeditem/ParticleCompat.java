@@ -6,17 +6,22 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Spawns particles across server versions: Particle changed from an enum
  * to keyed static fields in newer APIs, so the configured constant is
  * resolved via reflection (which works for both shapes) with an automatic
- * fallback to FLAME and a silent no-op when neither exists.
+ * fallback to FLAME and a silent no-op when neither exists. Resolutions
+ * (including unknown names) are cached - names come from config and are
+ * stable, and this runs once per expiry with a viewer.
  */
 public final class ParticleCompat {
 
-    private static Particle fallback;
-    private static boolean fallbackResolved;
+    private static final Class<?> PARTICLE_CLASS = findParticleClass();
+    private static final Map<String, Optional<Particle>> BY_NAME = new ConcurrentHashMap<String, Optional<Particle>>();
 
     private ParticleCompat() {
     }
@@ -39,27 +44,42 @@ public final class ParticleCompat {
         world.spawnParticle(particle, center, count, 0.4, 0.4, 0.4);
     }
 
-    private static Particle resolve(String name) {
+    /** Package private for tests. */
+    static Particle resolve(String name) {
         Particle particle = byName(name);
         if (particle != null) {
             return particle;
         }
-        if (!fallbackResolved) {
-            fallback = byName("FLAME");
-            fallbackResolved = true;
-        }
-        return fallback;
+        // cached like any other name, so FLAME is only resolved once
+        return byName("FLAME");
     }
 
     private static Particle byName(String name) {
         if (name == null || name.isEmpty()) {
             return null;
         }
+        String key = name.trim().toUpperCase(Locale.ROOT);
+        Optional<Particle> cached = BY_NAME.get(key);
+        if (cached != null) {
+            return cached.orElse(null);
+        }
+        if (PARTICLE_CLASS == null) {
+            return null;
+        }
         try {
-            Class<?> particleClass = Class.forName("org.bukkit.Particle");
-            Object value = particleClass.getField(name.trim().toUpperCase(Locale.ROOT)).get(null);
-            return (Particle) value;
+            Particle particle = (Particle) PARTICLE_CLASS.getField(key).get(null);
+            BY_NAME.put(key, Optional.of(particle));
+            return particle;
         } catch (ReflectiveOperationException | RuntimeException e) {
+            BY_NAME.put(key, Optional.<Particle>empty());
+            return null;
+        }
+    }
+
+    private static Class<?> findParticleClass() {
+        try {
+            return Class.forName("org.bukkit.Particle");
+        } catch (ClassNotFoundException e) {
             return null;
         }
     }

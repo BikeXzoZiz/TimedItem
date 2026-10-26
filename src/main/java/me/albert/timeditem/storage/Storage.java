@@ -60,6 +60,16 @@ public interface Storage extends AutoCloseable {
      */
     Map<String, Map<String, Long>> expiredStats(String sinceDay);
 
+    /**
+     * Writes deferred changes to durable storage. Flat file storage runs
+     * write-behind (mutations mark files dirty, this rewrites them) and
+     * is flushed at most once per second by StorageWriter plus once on
+     * close; SQL and MongoDB apply every write immediately, so this is a
+     * no-op for them. Called on the background writer thread.
+     */
+    default void flush() {
+    }
+
     /** Releases connections and threads; called on disable. */
     void close();
 }

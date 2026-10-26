@@ -115,27 +115,44 @@ public final class RecoveryStore {
         return item == null ? null : new Entry(record, item);
     }
 
-    /** Records one expired item; safe to call from any thread. */
-    public synchronized void record(ItemStack item, Player player, World world) {
+    /**
+     * Records one expired item; safe to call from any thread. Only the
+     * cheap snapshot clone happens here - the NBT encode is heavy, so it
+     * runs on the StorageWriter thread and the entry shows up in the
+     * restore GUI once encoding finished.
+     */
+    public void record(ItemStack item, Player player, World world) {
         if (!plugin.pluginConfig().isRecoveryEnabled() || item == null
                 || item.getType() == Material.AIR) {
             return;
         }
-        ItemSerializer.Encoded encoded = ItemSerializer.encode(item);
+        ItemStack snapshot = item.clone();
+        String id = UUID.randomUUID().toString();
+        long time = System.currentTimeMillis();
+        String playerUuid = player == null ? null : player.getUniqueId().toString();
+        String playerName = player == null ? null : player.getName();
+        String worldName = world == null ? "" : world.getName();
+        writer.runWrite(() -> recordEncoded(id, time, playerUuid, playerName, worldName, snapshot));
+    }
+
+    /** Runs on the StorageWriter thread: encodes the snapshot, then publishes the entry. */
+    private void recordEncoded(String id, long time, String playerUuid, String playerName,
+                               String worldName, ItemStack snapshot) {
+        ItemSerializer.Encoded encoded = ItemSerializer.encode(snapshot);
         if (encoded == null) {
             return;
         }
-        RecoveryRecord record = new RecoveryRecord(UUID.randomUUID().toString(),
-                System.currentTimeMillis(),
-                player == null ? null : player.getUniqueId().toString(),
-                player == null ? null : player.getName(),
-                world == null ? "" : world.getName(),
-                encoded.format, encoded.base64);
-        entries.add(new Entry(record, item.clone()));
-        trim();
+        RecoveryRecord record = new RecoveryRecord(id, time, playerUuid, playerName,
+                worldName, encoded.format, encoded.base64);
+        int count;
+        synchronized (this) {
+            entries.add(new Entry(record, snapshot));
+            trim();
+            count = entries.size();
+        }
         writer.insertRecovery(record);
-        DebugLog.verbose("Recorded expired " + item.getType() + " in recovery storage ("
-                + entries.size() + " entries)");
+        DebugLog.verbose("Recorded expired " + snapshot.getType() + " in recovery storage ("
+                + count + " entries)");
     }
 
     /** Removes the entry (e.g. it was handed back via /ti restore). */

@@ -6,6 +6,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Stamps the configured expiry onto items won from CrazyCrates crates.
@@ -31,36 +33,34 @@ final class CrazyCratesTimerHook {
         if (seconds <= 0) {
             return null;
         }
+        // only one candidate event class exists per server - resolve all
+        // accessors on the first fired event instead of scanning
+        // getMethods() two or three times per prize
+        Map<Class<?>, Accessors> accessors = new ConcurrentHashMap<Class<?>, Accessors>();
         return ReflectiveEventHook.register(plugin, "CrazyCrates auto-timer", EVENT_CLASSES,
                 EventPriority.NORMAL, true, event -> {
-                    ItemStack item = prizeItem(event);
+                    Accessors acc = accessors.computeIfAbsent(event.getClass(), Accessors::of);
+                    ItemStack item = prizeItem(event, acc);
                     if (item == null || item.getType() == Material.AIR) {
                         return;
                     }
                     AutoTimer.apply(item, plugin, seconds);
-                    callSetter(event, item);
+                    if (acc.setter != null) {
+                        HookReflection.invoke(acc.setter, event, item);
+                    }
                 });
     }
 
     /** Direct event getter first, then the prize object it may hand out. */
-    private static ItemStack prizeItem(Object event) {
-        Method getter = HookReflection.findGetter(event.getClass(), "item", ItemStack.class);
-        Object item = getter == null ? null : HookReflection.invoke(getter, event);
+    private static ItemStack prizeItem(Object event, Accessors acc) {
+        Object item = acc.itemGetter == null ? null : HookReflection.invoke(acc.itemGetter, event);
         if (item instanceof ItemStack) {
             return (ItemStack) item;
         }
         // fall back: event.getPrize() -> prize.getItemStack()-style getter
-        Object prize = null;
-        for (Method method : event.getClass().getMethods()) {
-            if (method.getParameterCount() == 0
-                    && method.getReturnType().getSimpleName().equals("Prize")) {
-                prize = HookReflection.invoke(method, event);
-                break;
-            }
-        }
-        if (prize != null) {
-            Method itemGetter = HookReflection.findGetter(prize.getClass(), "item", ItemStack.class);
-            Object stack = itemGetter == null ? null : HookReflection.invoke(itemGetter, prize);
+        if (acc.prizeGetter != null && acc.prizeItemGetter != null) {
+            Object prize = HookReflection.invoke(acc.prizeGetter, event);
+            Object stack = prize == null ? null : HookReflection.invoke(acc.prizeItemGetter, prize);
             if (stack instanceof ItemStack) {
                 return (ItemStack) stack;
             }
@@ -68,15 +68,50 @@ final class CrazyCratesTimerHook {
         return null;
     }
 
-    /** Pushes the mutated stack back when the event offers a setter. */
-    private static void callSetter(Object event, ItemStack item) {
-        for (Method method : event.getClass().getMethods()) {
-            if (method.getParameterCount() == 1
-                    && method.getParameterTypes()[0] == ItemStack.class
-                    && method.getName().toLowerCase(java.util.Locale.ROOT).startsWith("set")) {
-                HookReflection.invoke(method, event, item);
-                return;
+    /** Resolved once per event class; prize accessors come from the declared types. */
+    private static final class Accessors {
+        final Method itemGetter;
+        final Method prizeGetter;
+        final Method prizeItemGetter;
+        final Method setter;
+
+        private Accessors(Method itemGetter, Method prizeGetter,
+                          Method prizeItemGetter, Method setter) {
+            this.itemGetter = itemGetter;
+            this.prizeGetter = prizeGetter;
+            this.prizeItemGetter = prizeItemGetter;
+            this.setter = setter;
+        }
+
+        static Accessors of(Class<?> eventClass) {
+            Method itemGetter = HookReflection.findGetter(eventClass, "item", ItemStack.class);
+            Method prizeGetter = findPrizeGetter(eventClass);
+            Method prizeItemGetter = prizeGetter == null
+                    ? null : HookReflection.findGetter(prizeGetter.getReturnType(), "item", ItemStack.class);
+            return new Accessors(itemGetter, prizeGetter, prizeItemGetter, setter(eventClass));
+        }
+
+        /** Zero-arg method returning the plugin's Prize type, if any. */
+        private static Method findPrizeGetter(Class<?> eventClass) {
+            for (Method method : eventClass.getMethods()) {
+                if (method.getParameterCount() == 0
+                        && method.getReturnType().getSimpleName().equals("Prize")) {
+                    return method;
+                }
             }
+            return null;
+        }
+
+        /** The first public method accepting a single ItemStack named like a setter. */
+        private static Method setter(Class<?> eventClass) {
+            for (Method method : eventClass.getMethods()) {
+                if (method.getParameterCount() == 1
+                        && method.getParameterTypes()[0] == ItemStack.class
+                        && method.getName().toLowerCase(java.util.Locale.ROOT).startsWith("set")) {
+                    return method;
+                }
+            }
+            return null;
         }
     }
 }

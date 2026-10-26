@@ -32,6 +32,10 @@ public abstract class SqlStorage implements Storage {
     private final long cutoffMillis;
     private final int maxItems;
     private final int auditHistory;
+    /** How many audit inserts between trim DELETEs (a full-table sort each). */
+    static final int AUDIT_TRIM_EVERY = 64;
+    /** Audit inserts since the last trim; only touched from the writer thread. */
+    private int auditSinceTrim;
 
     protected SqlStorage(HikariConfig poolConfig, Logger logger, long cutoffMillis, int maxItems,
                          int auditHistory) {
@@ -176,10 +180,17 @@ public abstract class SqlStorage implements Storage {
                 insert.setString(8, record.getDetails());
                 insert.executeUpdate();
             }
-            try (Statement trim = connection.createStatement()) {
-                trim.executeUpdate("DELETE FROM timeditem_audit WHERE id NOT IN ("
-                        + "SELECT id FROM timeditem_audit ORDER BY id DESC LIMIT "
-                        + auditHistory + ")");
+            // the trim DELETE sorts the whole audit table - run it every
+            // AUDIT_TRIM_EVERYth insert instead of on every one; the table
+            // may exceed the cap by up to that many rows, which auditPage
+            // never shows (it reads newest first with a LIMIT)
+            if (++auditSinceTrim >= AUDIT_TRIM_EVERY) {
+                auditSinceTrim = 0;
+                try (Statement trim = connection.createStatement()) {
+                    trim.executeUpdate("DELETE FROM timeditem_audit WHERE id NOT IN ("
+                            + "SELECT id FROM timeditem_audit ORDER BY id DESC LIMIT "
+                            + auditHistory + ")");
+                }
             }
         } catch (SQLException e) {
             logger.warning("Audit insert failed: " + e.getMessage());

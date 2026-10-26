@@ -92,4 +92,35 @@ class SqliteStorageTest {
             assertEquals("pipe|and\\slash", record.getDetails());
         }
     }
+
+    @Test
+    void auditTrimIsAmortizedButCorrect() {
+        int trimEvery = SqlStorage.AUDIT_TRIM_EVERY;
+        try (SqliteStorage storage = new SqliteStorage(folder.resolve("trim.sqlite"), LOG,
+                7 * 86400000L, 100, 100)) {
+            // insert past several trim points
+            int first = 100 + trimEvery * 4;
+            for (int i = 1; i <= first; i++) {
+                storage.appendAudit(new AuditRecord(i * 1000L, "uuid", "Steve",
+                        AuditRecord.SET, "Bob", null, "DIAMOND", String.valueOf(i)));
+            }
+            // the table may exceed the cap by up to one trim interval
+            List<AuditRecord> all = storage.auditPage(10000, 0);
+            assertTrue(all.size() > 100 && all.size() <= 100 + trimEvery,
+                    "expected cap..cap+trimEvery rows, got " + all.size());
+            assertEquals(String.valueOf(first), all.get(0).getDetails());
+
+            // inserting up to the next trim point prunes to exactly the cap
+            int toNextTrim = trimEvery - (first % trimEvery);
+            for (int i = first + 1; i <= first + toNextTrim; i++) {
+                storage.appendAudit(new AuditRecord(i * 1000L, "uuid", "Steve",
+                        AuditRecord.SET, "Bob", null, "DIAMOND", String.valueOf(i)));
+            }
+            List<AuditRecord> trimmed = storage.auditPage(10000, 0);
+            assertEquals(100, trimmed.size());
+            assertEquals(String.valueOf(first + toNextTrim), trimmed.get(0).getDetails());
+            assertEquals(String.valueOf(first + toNextTrim - 99),
+                    trimmed.get(trimmed.size() - 1).getDetails());
+        }
+    }
 }

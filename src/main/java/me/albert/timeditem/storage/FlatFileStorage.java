@@ -4,7 +4,6 @@ import me.albert.timeditem.RecoveryFormat;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -24,12 +23,15 @@ import java.util.logging.Logger;
  * recovery.log keeps the line format documented in {@link me.albert.timeditem.RecoveryFormat}
  * (v3 lines carry the entry id and the player UUID; v2/v1 lines still load).
  * audit.log stores one line per audit entry, newest last, trimmed to the
- * audit_history cap. stats.yml maps day -> material -> count and is only
- * rewritten when a day's numbers change.
+ * audit_history cap. stats.yml maps day -> material -> count.
  *
- * All state is kept in memory and rewritten atomically on change; every
- * method is synchronized because the writer thread and command-time
- * queries (e.g. /ti stats) can race.
+ * All state is kept in memory; disk writes are write-behind: mutations
+ * only mark the affected file dirty, and {@link #flush()} rewrites every
+ * dirty file with an atomic move. StorageWriter schedules that at most
+ * once per second, and {@link #close()} flushes on disable - a hard crash
+ * can therefore lose roughly the last second of changes. Every method is
+ * synchronized because the writer thread and command-time queries
+ * (e.g. /ti stats) can race.
  */
 public final class FlatFileStorage implements Storage {
 
@@ -42,6 +44,10 @@ public final class FlatFileStorage implements Storage {
     private final List<AuditRecord> audit = new ArrayList<AuditRecord>();
     /** day -> (material -> count); insertion order = chronological. */
     private final Map<String, Map<String, Long>> stats = new LinkedHashMap<String, Map<String, Long>>();
+    /** Write-behind dirty flags, only touched under this object's monitor. */
+    private boolean recoveryDirty;
+    private boolean auditDirty;
+    private boolean statsDirty;
 
     public FlatFileStorage(Path dataFolder, Logger logger, long cutoffMillis, int maxItems,
                            int auditHistory) {
@@ -61,6 +67,9 @@ public final class FlatFileStorage implements Storage {
 
     @Override
     public synchronized List<RecoveryRecord> loadRecovery() {
+        // reload semantics: persist pending in-memory changes first, then
+        // rebuild from disk - a reload must not lose unflushed records
+        flush();
         records.clear();
         Path file = dataFolder.resolve("recovery.log");
         if (Files.exists(file)) {
@@ -78,7 +87,7 @@ public final class FlatFileStorage implements Storage {
             }
         }
         trimRecovery();
-        writeRecovery();
+        recoveryDirty = true;
         return new ArrayList<RecoveryRecord>(records);
     }
 
@@ -87,13 +96,13 @@ public final class FlatFileStorage implements Storage {
         deleteById(record.getId());
         records.add(record);
         trimRecovery();
-        writeRecovery();
+        recoveryDirty = true;
     }
 
     @Override
     public synchronized void deleteRecovery(String id) {
         if (deleteById(id)) {
-            writeRecovery();
+            recoveryDirty = true;
         }
     }
 
@@ -138,7 +147,7 @@ public final class FlatFileStorage implements Storage {
         while (audit.size() > auditHistory) {
             audit.remove(0);
         }
-        writeAudit();
+        auditDirty = true;
     }
 
     @Override
@@ -160,7 +169,7 @@ public final class FlatFileStorage implements Storage {
         }
         Long count = perDay.get(material);
         perDay.put(material, (count == null ? 0L : count) + 1L);
-        writeStats();
+        statsDirty = true;
     }
 
     @Override
@@ -175,8 +184,25 @@ public final class FlatFileStorage implements Storage {
     }
 
     @Override
-    public void close() {
-        // files are written through on every change - nothing to flush
+    public synchronized void close() {
+        flush();
+    }
+
+    /** Writes every file changed since the last flush (StorageWriter schedules this). */
+    @Override
+    public synchronized void flush() {
+        if (recoveryDirty) {
+            recoveryDirty = false;
+            writeRecovery();
+        }
+        if (auditDirty) {
+            auditDirty = false;
+            writeAudit();
+        }
+        if (statsDirty) {
+            statsDirty = false;
+            writeStats();
+        }
     }
 
     private void trimRecovery() {
@@ -218,12 +244,8 @@ public final class FlatFileStorage implements Storage {
                 yaml.set("stats." + day.getKey() + "." + material.getKey(), material.getValue());
             }
         }
-        try {
-            Files.createDirectories(dataFolder);
-            yaml.save(dataFolder.resolve("stats.yml").toFile());
-        } catch (IOException e) {
-            logger.log(Level.WARNING, "Could not write stats.yml: " + e);
-        }
+        // atomic like the .log files - a plain save could leave a torn file
+        writeAtomically(dataFolder.resolve("stats.yml"), yaml.saveToString());
     }
 
     private void writeAtomically(Path file, String content) {

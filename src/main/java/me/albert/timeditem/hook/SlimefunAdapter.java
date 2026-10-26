@@ -17,6 +17,7 @@ final class SlimefunAdapter implements CustomItemAdapter {
     private final Method getByItem;
     private final Method getById;
     private final Method getItem;
+    private final Method getId;
 
     SlimefunAdapter() {
         this.slimefunItem = HookReflection.findClass(
@@ -28,6 +29,13 @@ final class SlimefunAdapter implements CustomItemAdapter {
                 : HookReflection.findMethod(slimefunItem, "getById", String.class);
         this.getItem = slimefunItem == null ? null
                 : HookReflection.findMethod(slimefunItem, "getItem");
+        // newer builds call it getID, legacy ones getId - resolved once
+        // here instead of scanning getMethods() on every identify
+        Method id = slimefunItem == null ? null : HookReflection.findAnyMethod(slimefunItem, "getID", 0);
+        if (id == null && slimefunItem != null) {
+            id = HookReflection.findAnyMethod(slimefunItem, "getId", 0);
+        }
+        this.getId = id;
     }
 
     @Override
@@ -49,10 +57,6 @@ final class SlimefunAdapter implements CustomItemAdapter {
             Object sfItem = HookReflection.invoke(getByItem, null, item);
             if (sfItem == null) {
                 return null;
-            }
-            Method getId = HookReflection.findAnyMethod(sfItem.getClass(), "getID", 0);
-            if (getId == null) {
-                getId = HookReflection.findAnyMethod(sfItem.getClass(), "getId", 0);
             }
             String id = getId == null ? null : (String) HookReflection.invoke(getId, sfItem);
             return id == null || id.isEmpty() ? null : id;
