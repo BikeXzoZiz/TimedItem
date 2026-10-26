@@ -69,6 +69,26 @@ public final class PluginConfig {
     private String auditHeader;
     private String auditLine;
     private String auditEmpty;
+    private String transformMessage;
+    private String graceMessage;
+    private String renewalSuccess;
+    private String renewalTokenMissing;
+    private String restoreReminder;
+    private String transformUnknown;
+
+    private boolean expiryTransformEnabled;
+    private String expiryTransformDefault;
+    private Map<String, Transforms.Profile> transformProfiles;
+    private boolean graceEnabled;
+    private int graceSeconds;
+    private boolean renewalEnabled;
+    private long renewalAddSeconds;
+    private Material renewalTokenMaterial;
+    private String renewalTokenCustomId;
+    private String renewalTokenName;
+    private boolean discordWebhookUseEmbed;
+    private String discordWebhookEmbedTitle;
+    private int discordWebhookEmbedColor;
 
     private String expiresAtPrefix;
     private String usefulLifePrefix;
@@ -164,7 +184,7 @@ public final class PluginConfig {
     public void load() {
         plugin.saveDefaultConfig();
         FileConfiguration raw = plugin.getConfig();
-        raw.addDefault("config-version", 8);
+        raw.addDefault("config-version", 10);
         raw.addDefault("Settings.language", "en");
         raw.addDefault("Settings.start_date_calculate_on_click", true);
         raw.addDefault("Settings.reset_player_health_if_armor", true);
@@ -212,6 +232,19 @@ public final class PluginConfig {
         raw.addDefault("Settings.storage.mongodb.uri", "mongodb://localhost:27017");
         raw.addDefault("Settings.storage.mongodb.database", "timeditem");
         raw.addDefault("Settings.storage.audit_history", 5000);
+        raw.addDefault("Settings.expiry_transform.enabled", false);
+        raw.addDefault("Settings.expiry_transform.default", "");
+        raw.addDefault("Settings.transforms", new java.util.ArrayList<String>());
+        raw.addDefault("Settings.grace.enabled", false);
+        raw.addDefault("Settings.grace.seconds", 30);
+        raw.addDefault("Settings.renewal.enabled", false);
+        raw.addDefault("Settings.renewal.add_time", "7d");
+        raw.addDefault("Settings.renewal.token.material", "CLOCK");
+        raw.addDefault("Settings.renewal.token.custom_id", "");
+        raw.addDefault("Settings.renewal.token.name", "");
+        raw.addDefault("Settings.discord_webhook.use_embed", false);
+        raw.addDefault("Settings.discord_webhook.embed_title", "TimedItem");
+        raw.addDefault("Settings.discord_webhook.embed_color", "ff5555");
         raw.addDefault("Settings.blacklist.materials", new java.util.ArrayList<String>());
         raw.addDefault("Hooks.mmoitems", true);
         raw.addDefault("Hooks.itemsadder", true);
@@ -389,6 +422,12 @@ public final class PluginConfig {
         auditHeader = color(lang.getString("Messages.audit_header"));
         auditLine = color(lang.getString("Messages.audit_line"));
         auditEmpty = color(lang.getString("Messages.audit_empty"));
+        transformMessage = color(lang.getString("Messages.transform_received"));
+        graceMessage = color(lang.getString("Messages.grace_blocked"));
+        renewalSuccess = color(lang.getString("Messages.renewal_success"));
+        renewalTokenMissing = color(lang.getString("Messages.renewal_token_missing"));
+        restoreReminder = color(lang.getString("Messages.restore_reminder"));
+        transformUnknown = color(lang.getString("Messages.transform_unknown"));
 
         expiresAtPrefix = color(lang.getString("DateFormat.expires_at"));
         usefulLifePrefix = color(lang.getString("DateFormat.useful_life"));
@@ -404,6 +443,68 @@ public final class PluginConfig {
         units.put(unitH.toLowerCase(Locale.ROOT), 3600L);
         units.put(unitD.toLowerCase(Locale.ROOT), 86400L);
         unitSeconds = Collections.unmodifiableMap(units);
+
+        // Expiry transformation (2.8+): profiles in Settings.transforms
+        expiryTransformEnabled = raw.getBoolean("Settings.expiry_transform.enabled", false);
+        String defaultTransform = raw.getString("Settings.expiry_transform.default", "");
+        expiryTransformDefault = defaultTransform == null ? "" : defaultTransform.trim();
+        transformProfiles = Transforms.unmodifiable(Transforms.parse(
+                raw.getConfigurationSection("Settings.transforms"), plugin));
+
+        // Grace period: item becomes unusable in its final seconds
+        graceEnabled = raw.getBoolean("Settings.grace.enabled", false);
+        graceSeconds = Math.max(1, raw.getInt("Settings.grace.seconds", 30));
+
+        // Renewal token: right-click to extend a timed item
+        renewalEnabled = raw.getBoolean("Settings.renewal.enabled", false);
+        String addTime = raw.getString("Settings.renewal.add_time", "7d");
+        renewalAddSeconds = addTime == null ? 0L : DurationParser.parse(addTime.trim(), units);
+        if (renewalEnabled && renewalAddSeconds <= 0) {
+            plugin.getLogger().warning("Settings.renewal.add_time '" + addTime
+                    + "' is not a valid duration - renewal disabled.");
+            renewalEnabled = false;
+        }
+        String tokenMaterial = raw.getString("Settings.renewal.token.material", "CLOCK");
+        renewalTokenMaterial = tokenMaterial == null || tokenMaterial.trim().isEmpty()
+                ? null : Material.matchMaterial(tokenMaterial.trim());
+        if (renewalEnabled && renewalTokenMaterial == null) {
+            plugin.getLogger().warning("Settings.renewal.token.material '" + tokenMaterial
+                    + "' is unknown - renewal disabled.");
+            renewalEnabled = false;
+        }
+        String tokenCustom = raw.getString("Settings.renewal.token.custom_id", "");
+        renewalTokenCustomId = tokenCustom == null ? "" : tokenCustom.trim();
+        if (renewalEnabled && renewalTokenMaterial == null && renewalTokenCustomId.isEmpty()) {
+            plugin.getLogger().warning("Renewal token has neither material nor custom_id"
+                    + " - renewal disabled.");
+            renewalEnabled = false;
+        }
+        String tokenName = raw.getString("Settings.renewal.token.name", "");
+        renewalTokenName = tokenName == null ? ""
+                : ChatColor.stripColor(color(tokenName)).toLowerCase(Locale.ROOT);
+
+        // Discord webhook embed mode
+        discordWebhookUseEmbed = raw.getBoolean("Settings.discord_webhook.use_embed", false);
+        String embedTitle = raw.getString("Settings.discord_webhook.embed_title", "TimedItem");
+        discordWebhookEmbedTitle = embedTitle == null ? "TimedItem" : embedTitle;
+        discordWebhookEmbedColor = parseHexColor(
+                raw.getString("Settings.discord_webhook.embed_color", "ff5555"));
+    }
+
+    /** Hex (or decimal) string to an RGB int, defaulting to the fallback. */
+    private static int parseHexColor(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return 0xff5555;
+        }
+        String value = raw.trim();
+        if (value.startsWith("#")) {
+            value = value.substring(1);
+        }
+        try {
+            return Integer.parseInt(value, 16) & 0xffffff;
+        } catch (NumberFormatException e) {
+            return 0xff5555;
+        }
     }
 
     public static String color(String text) {
@@ -592,6 +693,87 @@ public final class PluginConfig {
 
     public String getAuditEmpty() {
         return auditEmpty;
+    }
+
+    public String getTransformMessage() {
+        return transformMessage;
+    }
+
+    public String getGraceMessage() {
+        return graceMessage;
+    }
+
+    public String getRenewalSuccess() {
+        return renewalSuccess;
+    }
+
+    public String getRenewalTokenMissing() {
+        return renewalTokenMissing;
+    }
+
+    public String getRestoreReminder() {
+        return restoreReminder;
+    }
+
+    public String getTransformUnknown() {
+        return transformUnknown;
+    }
+
+    /** True when expiry transformation is enabled (Settings.expiry_transform). */
+    public boolean isExpiryTransformEnabled() {
+        return expiryTransformEnabled;
+    }
+
+    /** Profile key used when an item carries no transform tag ("" = none). */
+    public String getExpiryTransformDefault() {
+        return expiryTransformDefault;
+    }
+
+    /** All parsed profiles from Settings.transforms, keyed lowercase. */
+    public Map<String, Transforms.Profile> transformProfiles() {
+        return transformProfiles;
+    }
+
+    public boolean isGraceEnabled() {
+        return graceEnabled;
+    }
+
+    public int getGraceSeconds() {
+        return graceSeconds;
+    }
+
+    public boolean isRenewalEnabled() {
+        return renewalEnabled;
+    }
+
+    /** Seconds added per renewal token (0 = renewal off). */
+    public long getRenewalAddSeconds() {
+        return renewalAddSeconds;
+    }
+
+    public Material getRenewalTokenMaterial() {
+        return renewalTokenMaterial;
+    }
+
+    public String getRenewalTokenCustomId() {
+        return renewalTokenCustomId;
+    }
+
+    /** Required token display name (stripped, lowercase; "" = any name). */
+    public String getRenewalTokenName() {
+        return renewalTokenName;
+    }
+
+    public boolean isDiscordWebhookUseEmbed() {
+        return discordWebhookUseEmbed;
+    }
+
+    public String getDiscordWebhookEmbedTitle() {
+        return discordWebhookEmbedTitle;
+    }
+
+    public int getDiscordWebhookEmbedColor() {
+        return discordWebhookEmbedColor;
     }
 
     /** True unless the hook was switched off under Hooks.&lt;id&gt; in config.yml. */
@@ -1043,6 +1225,18 @@ public final class PluginConfig {
         lang.addDefault("Messages.audit_line",
                 " &8[{date}] &e{actor} &7{action} &7target=&f{target} &7item=&f{item} &7{details}");
         lang.addDefault("Messages.audit_empty", "&7The audit log is empty.");
+        lang.addDefault("Messages.transform_received",
+                "&7Your expired item turned into &e{item}&7.");
+        lang.addDefault("Messages.grace_blocked",
+                "&cThis item expires in &e{time} &cand can no longer be used!");
+        lang.addDefault("Messages.renewal_success",
+                "&aRenewed with a token. Remaining: &e{time}");
+        lang.addDefault("Messages.renewal_token_missing",
+                "&7Hold the item to renew in one hand and the renewal token in the other.");
+        lang.addDefault("Messages.restore_reminder",
+                "&eYou have &6{count} &eexpired item(s) waiting for restore. &7(/ti restore)");
+        lang.addDefault("Messages.transform_unknown",
+                "&cUnknown transform profile: &e{id}&c. Define it under Settings.transforms.");
         lang.addDefault("DateFormat.expires_at", "&cExpires: ");
         lang.addDefault("DateFormat.useful_life", "&7Lifetime: ");
         lang.addDefault("DateFormat.paused", "&7Paused: ");

@@ -1,9 +1,9 @@
-# TimedItem 2.7.0
+# TimedItem 2.8.0
 # Every key has a built-in default - if a key is missing the default is
 # used and written back to this file, so a partial config never crashes.
 # Messages live in lang/messages_<language>.yml (see Settings.language).
 
-config-version: 9
+config-version: 10
 
 Settings:
   # Language file to load messages from: lang/messages_en.yml,
@@ -64,6 +64,46 @@ Settings:
     # Ground/frame expiry has no player: commands containing {player} are
     # skipped, the rest still run.
     []
+  expiry_transform:
+    # Instead of vanishing, expired items turn into another item
+    # (2.8+). Profiles are defined under Settings.transforms; pick one
+    # per item with /ti set 7d transform:ash (or ... give Steve 7d
+    # transform:ash), leave "default" empty to transform only tagged
+    # items.
+    enabled: false
+    # Profile key for items without their own transform tag ("" = none).
+    default: ""
+  transforms:
+    # One profile per key. Result item: "material" (vanilla) or
+    # "custom_id" (plugin:id from an integration, wins over material).
+    # name/lore are optional overrides, amount clamps to the stack size,
+    # commands run on the console at the moment of the transformation.
+    # This example is inactive until expiry_transform.enabled: true:
+    #  ash:
+    #    material: "GUNPOWDER"
+    #    name: "&8Ash"
+    #    lore: ["&7Remains of an expired item"]
+    #    amount: 1
+    #    commands: []
+    []
+  grace:
+    # In the final <seconds> the item can no longer be used (right
+    # click / consume is cancelled with a warning) but it still only
+    # disappears when the timer reaches zero.
+    enabled: false
+    seconds: 30
+  renewal:
+    # Renewal token (2.8+): right-click with the token in one hand and
+    # a timed item in the other adds <add_time> and consumes one token.
+    # Hand the tokens out with crates (CrazyCrates integration) or /give.
+    enabled: false
+    add_time: "7d"
+    token:
+      # Vanilla material OR custom_id ("plugin:id") of the token.
+      material: "CLOCK"
+      custom_id: ""
+      # When set, only tokens with this exact display name count.
+      name: ""
   # Administrative lookups (no player-facing effect):
   # /ti find <material|plugin:id|name> locates timed items in inventories,
   # containers and on the ground; /ti stats [days] shows expiry counts;
@@ -132,6 +172,12 @@ Settings:
     # Message template. Placeholders: {player} (- for ground expiry),
     # {item} (material name), {world}.
     message: "{player}'s timed item expired: {item} ({world})"
+    # Send as a rich embed instead of a plain message (2.8+). The
+    # message template above becomes the embed description.
+    use_embed: false
+    embed_title: "TimedItem"
+    # Embed color, hex without '#'.
+    embed_color: "ff5555"
   blacklist:
     # Materials that may never receive a timer via /ti set, /ti add,
     # /ti give or the menu. Items already carrying a timer are unaffected.

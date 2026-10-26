@@ -7,12 +7,21 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.text.SimpleDateFormat;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
 /**
  * The single expiry pipeline shared by every context: player-bound
  * events, the periodic inventory scan and ground/frame/armor-stand
  * expiry. Fires the cancellable {@link ItemExpireEvent}, records the
  * recovery entry, removes the item and runs the configured effects and
- * commands.
+ * commands. With expiry transformation enabled (2.8+) the item instead
+ * turns into its configured replacement (per-item profile key in the
+ * PDC, or the configured default) - the event lets developers swap or
+ * clear that replacement.
  *
  * The player is null for ground expiry: those runs hand the sound and
  * particles to the nearest player instead and skip commands containing
@@ -24,11 +33,11 @@ public final class ExpiryService {
     private static final double GROUND_EFFECT_RADIUS = 20.0;
 
     /** yyyy-MM-dd key for the daily expiry statistics (thread safe). */
-    private static final ThreadLocal<java.text.SimpleDateFormat> DAY_FORMAT =
-            new ThreadLocal<java.text.SimpleDateFormat>() {
+    private static final ThreadLocal<SimpleDateFormat> DAY_FORMAT =
+            new ThreadLocal<SimpleDateFormat>() {
                 @Override
-                protected java.text.SimpleDateFormat initialValue() {
-                    return new java.text.SimpleDateFormat("yyyy-MM-dd");
+                protected SimpleDateFormat initialValue() {
+                    return new SimpleDateFormat("yyyy-MM-dd");
                 }
             };
 
@@ -53,6 +62,10 @@ public final class ExpiryService {
     public boolean expire(ItemStack item, Player player, Location effectCenter, World world,
                           Runnable removal, boolean armor, PluginConfig config) {
         ItemExpireEvent event = new ItemExpireEvent(item, player);
+        Transforms.Profile profile = resolveTransform(item, config);
+        if (profile != null) {
+            event.setReplacement(Transforms.build(plugin, profile));
+        }
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) {
             return false;
@@ -86,11 +99,78 @@ public final class ExpiryService {
             }
             player.sendMessage(config.getPrefix() + config.getExpire());
         }
+        deliverReplacement(event.getReplacement(), profile, player, effectCenter, config);
         runExpiryCommands(player, config);
         plugin.discordWebhook().notifyExpiry(item, player, world, config);
-        plugin.storage().incrementExpired(DAY_FORMAT.get().format(new java.util.Date()),
+        plugin.storage().incrementExpired(DAY_FORMAT.get().format(new Date()),
                 item.getType().name());
         return true;
+    }
+
+    /**
+     * The transformation profile of the item: its per-item
+     * "transform:<key>" tag wins, then the configured default. Returns
+     * null when transformation stays off for this item.
+     */
+    private Transforms.Profile resolveTransform(ItemStack item, PluginConfig config) {
+        if (!config.isExpiryTransformEnabled()) {
+            return null;
+        }
+        String key = PdcCompat.readTransform(item);
+        if (key == null || key.isEmpty()) {
+            key = config.getExpiryTransformDefault();
+        }
+        return Transforms.find(config.transformProfiles(), key);
+    }
+
+    /**
+     * Hands the transformation result to the player (or drops it at the
+     * item's position for ground expiry) and runs the profile's extra
+     * console commands. Runs on the caller's thread, which is the
+     * owner's region thread on Folia - inventory access is legal here.
+     */
+    private void deliverReplacement(ItemStack replacement, Transforms.Profile profile,
+                                    Player player, Location effectCenter, PluginConfig config) {
+        if (replacement == null) {
+            return;
+        }
+        if (player != null) {
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(replacement);
+            for (ItemStack rest : leftover.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), rest);
+            }
+            player.sendMessage(config.getPrefix() + config.getTransformMessage()
+                    .replace("{item}", plugin.hooks() == null
+                            ? replacement.getType().name()
+                            : plugin.hooks().describe(replacement)));
+        } else if (effectCenter != null) {
+            effectCenter.getWorld().dropItemNaturally(effectCenter, replacement);
+        }
+        List<String> commands = profile == null ? Collections.<String>emptyList()
+                : profile.getCommands();
+        if (!commands.isEmpty()) {
+            final List<String> toRun = commands;
+            final Player target = player;
+            final Runnable dispatch = () -> {
+                for (String command : toRun) {
+                    if (target == null && command.contains("{player}")) {
+                        continue;
+                    }
+                    String cmd = command.replace("{player}", target == null ? "" : target.getName());
+                    if (cmd.startsWith("/")) {
+                        cmd = cmd.substring(1);
+                    }
+                    if (!cmd.isEmpty()) {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                    }
+                }
+            };
+            if (SchedulerCompat.isFolia()) {
+                SchedulerCompat.runGlobal(plugin, dispatch);
+            } else {
+                dispatch.run();
+            }
+        }
     }
 
     /**
@@ -99,12 +179,17 @@ public final class ExpiryService {
      * region, where console commands belong.
      */
     private void runExpiryCommands(Player player, PluginConfig config) {
+        final List<String> commands = config.getExpiryCommands();
+        if (commands.isEmpty()) {
+            return;
+        }
+        final Player target = player;
         final Runnable dispatch = () -> {
-            for (String command : config.getExpiryCommands()) {
-                if (player == null && command.contains("{player}")) {
+            for (String command : commands) {
+                if (target == null && command.contains("{player}")) {
                     continue;
                 }
-                String cmd = command.replace("{player}", player == null ? "" : player.getName());
+                String cmd = command.replace("{player}", target == null ? "" : target.getName());
                 if (cmd.startsWith("/")) {
                     cmd = cmd.substring(1);
                 }

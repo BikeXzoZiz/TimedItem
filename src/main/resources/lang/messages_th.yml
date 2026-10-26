@@ -50,6 +50,12 @@ Messages:
   audit_header: "&6บันทึกการกระทำ (หน้า {page}):"
   audit_line: " &8[{date}] &e{actor} &7{action} &7ผู้ถูกกระทำ=&f{target} &7ไอเทม=&f{item} &7{details}"
   audit_empty: "&7ยังไม่มีประวัติการกระทำ"
+  transform_received: "&7ไอเทมที่หมดอายุของคุณกลายเป็น &e{item}&7"
+  grace_blocked: "&cไอเทมนี้จะหมดอายุในอีก &e{time} &cใช้งานไม่ได้อีกแล้ว!"
+  renewal_success: "&aต่ออายุด้วยตัวต่ออายุแล้ว เวลาที่เหลือ: &e{time}"
+  renewal_token_missing: "&7ถือไอเทมที่ต้องการต่ออายุไว้มือหนึ่ง และตัวต่ออายุอีกมือหนึ่ง แล้วคลิกขวา"
+  restore_reminder: "&eคุณมีไอเทมหมดอายุ &6{count} &eชิ้นรอกู้คืน &7(/ti restore)"
+  transform_unknown: "&cไม่พบ transform profile: &e{id}&c กำหนดได้ที่ Settings.transforms"
 
 DateFormat:
   # Prefix ที่เขียนลง lore ของไอเทม — ห้ามแก้หลังมีไอเทมที่มี timer อยู่แล้ว

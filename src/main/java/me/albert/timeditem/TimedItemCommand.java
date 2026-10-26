@@ -218,13 +218,17 @@ public final class TimedItemCommand implements CommandExecutor {
         if (item == null) {
             return;
         }
-        if (args.length < 2) {
+        ArgScan scan = scanArgs(args);
+        if (scan.args.length < 2) {
             player.sendMessage(config.getPrefix() + config.getInvalidUsage());
             return;
         }
-        long seconds = parseDuration(args, config);
+        long seconds = parseDuration(scan.args, config);
         if (seconds <= 0) {
             player.sendMessage(config.getPrefix() + config.getInvalidUsage());
+            return;
+        }
+        if (!checkTransform(scan.transformKey, player, config)) {
             return;
         }
         if (TimeLore.isBlacklisted(item, config)) {
@@ -234,6 +238,9 @@ public final class TimedItemCommand implements CommandExecutor {
         TimeLore.applyLifetime(item, config, seconds);
         if (!config.isStartDateCalculateOnClick()) {
             TimeLore.startLifetime(item, config);
+        }
+        if (scan.transformKey != null) {
+            PdcCompat.writeTransform(item, scan.transformKey);
         }
         String pretty = TimeLore.formatDuration(seconds, config);
         player.sendMessage(config.getPrefix() + config.getTimeSet().replace("{time}", pretty));
@@ -315,10 +322,15 @@ public final class TimedItemCommand implements CommandExecutor {
      * item from an integrated plugin (mmoitems:SWORD:CUTLASS,
      * itemsadder:namespace:id, cc:Classic:GKITS, ...) instead; the
      * sender needs no item in hand, so console works too.
+     *
+     * Both flows accept a "transform:<key>" token anywhere after the
+     * subcommand to tag the gift with an expiry transformation profile.
      */
     private void handleGive(CommandSender sender, String[] args, PluginConfig config) {
+        ArgScan scan = scanArgs(args);
+        args = scan.args;
         if (args.length >= 3 && args[2].indexOf(':') >= 0) {
-            handleGiveCustom(sender, args, config);
+            handleGiveCustom(sender, args, config, scan.transformKey);
             return;
         }
         Player player = requirePlayer(sender, config);
@@ -343,6 +355,9 @@ public final class TimedItemCommand implements CommandExecutor {
             player.sendMessage(config.getPrefix() + config.getMaterialBlacklisted());
             return;
         }
+        if (!checkTransform(scan.transformKey, player, config)) {
+            return;
+        }
         long seconds = DurationParser.parse(args[2], config.unitSeconds());
         if (seconds <= 0) {
             player.sendMessage(config.getPrefix() + config.getInvalidUsage());
@@ -364,6 +379,9 @@ public final class TimedItemCommand implements CommandExecutor {
         ItemStack gift = held.clone();
         gift.setAmount(amount);
         TimeLore.applyExpiry(gift, config, seconds);
+        if (scan.transformKey != null) {
+            PdcCompat.writeTransform(gift, scan.transformKey);
+        }
         Map<Integer, ItemStack> leftover = target.getInventory().addItem(gift);
         for (ItemStack rest : leftover.values()) {
             target.getWorld().dropItemNaturally(target.getLocation(), rest);
@@ -388,7 +406,8 @@ public final class TimedItemCommand implements CommandExecutor {
      * /ti give <player> <plugin>:<id> <time> [amount] - hands the target
      * a timed copy of a custom item built by an integrated plugin.
      */
-    private void handleGiveCustom(CommandSender sender, String[] args, PluginConfig config) {
+    private void handleGiveCustom(CommandSender sender, String[] args, PluginConfig config,
+                                  String transformKey) {
         if (args.length < 4) {
             sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
             return;
@@ -428,9 +447,15 @@ public final class TimedItemCommand implements CommandExecutor {
             sender.sendMessage(config.getPrefix() + config.getMaterialBlacklisted());
             return;
         }
+        if (!checkTransform(transformKey, sender, config)) {
+            return;
+        }
         amount = Math.min(amount, built.getMaxStackSize());
         built.setAmount(amount);
         TimeLore.applyExpiry(built, config, seconds);
+        if (transformKey != null) {
+            PdcCompat.writeTransform(built, transformKey);
+        }
         Map<Integer, ItemStack> leftover = target.getInventory().addItem(built);
         for (ItemStack rest : leftover.values()) {
             target.getWorld().dropItemNaturally(target.getLocation(), rest);
@@ -544,6 +569,44 @@ public final class TimedItemCommand implements CommandExecutor {
             input.append(args[i]);
         }
         return DurationParser.parse(input.toString(), config.unitSeconds());
+    }
+
+    /** Parsed arguments of one command: "transform:<key>" tokens pulled out. */
+    private static final class ArgScan {
+        final String[] args;
+        final String transformKey;
+
+        ArgScan(String[] args, String transformKey) {
+            this.args = args;
+            this.transformKey = transformKey;
+        }
+    }
+
+    /** Pulls every "transform:<key>" token out of the arguments. */
+    private static ArgScan scanArgs(String[] args) {
+        List<String> kept = new ArrayList<String>();
+        String key = null;
+        for (String arg : args) {
+            if (arg.length() > 10 && arg.toLowerCase(Locale.ROOT).startsWith("transform:")) {
+                key = arg.substring(10);
+            } else {
+                kept.add(arg);
+            }
+        }
+        return new ArgScan(kept.toArray(new String[0]), key);
+    }
+
+    /** Validates a transform:<key> token; messages and returns false when unknown. */
+    private boolean checkTransform(String key, CommandSender sender, PluginConfig config) {
+        if (key == null) {
+            return true;
+        }
+        if (Transforms.find(config.transformProfiles(), key) == null) {
+            sender.sendMessage(config.getPrefix()
+                    + config.getTransformUnknown().replace("{id}", key));
+            return false;
+        }
+        return true;
     }
 
     private Player requirePlayer(CommandSender sender, PluginConfig config) {

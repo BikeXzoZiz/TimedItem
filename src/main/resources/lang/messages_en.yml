@@ -50,6 +50,12 @@ Messages:
   audit_header: "&6Audit log (page {page}):"
   audit_line: " &8[{date}] &e{actor} &7{action} &7target=&f{target} &7item=&f{item} &7{details}"
   audit_empty: "&7The audit log is empty."
+  transform_received: "&7Your expired item turned into &e{item}&7."
+  grace_blocked: "&cThis item expires in &e{time} &cand can no longer be used!"
+  renewal_success: "&aRenewed with a token. Remaining: &e{time}"
+  renewal_token_missing: "&7Hold the item to renew in one hand and the renewal token in the other."
+  restore_reminder: "&eYou have &6{count} &eexpired item(s) waiting for restore. &7(/ti restore)"
+  transform_unknown: "&cUnknown transform profile: &e{id}&c. Define it under Settings.transforms."
 
 DateFormat:
   # Lore prefixes shown on timed items. Changing these after items with

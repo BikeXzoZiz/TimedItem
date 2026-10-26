@@ -2,6 +2,26 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [2.8.0] - 2026-10-26
+
+### Added
+- **แปลงร่างเมื่อหมดอายุ (Expiry Transformation)** — ไอเทมหมดอายุแล้ว "กลายเป็น" อีกชิ้นแทนการหายไปเฉยๆ:
+  - นิยาม profile ได้หลายตัวที่ `Settings.transforms.<key>` — ผลลัพธ์เป็น vanilla material หรือ **custom item จาก integration** (`custom_id: "mmoitems:SWORD:X"`, CrazyCrates ฯลฯ) พร้อมแก้ชื่อ/lore/จำนวน และรัน console commands เพิ่มตอนแปลง (`{player}` ใช้ได้)
+  - เลือก profile ต่อไอเทมด้วย `transform:<key>` — `/ti set 7d transform:ash` หรือ `/ti give Steve 7d transform:ash` (แท็กอยู่ใน NBT ติดไปกับไอเทม); ไม่แท็ก = ใช้ `expiry_transform.default` ถ้าตั้งไว้
+  - ครอบคลุมทุก context อัตโนมัติ: ในตัวผู้เล่น (เข้า inventory เอง) และบนพื้น/เฟรม (ดรอปที่ตำแหน่งนั้น)
+  - Developer API: `ItemExpireEvent` เพิ่ม `getReplacement()` / `setReplacement()` — แก้หรือยกเลิกการแปลงได้จากปลั๊กอินอื่น
+- **Grace period** (`Settings.grace`) — ช่วงวินาทีสุดท้าย (default 30 วิ เปิดได้) ไอเทมใช้งานไม่ได้ (คลิกขวาถูก cancel + แจ้งเตือน) แต่จะหายจริงเมื่อเวลาถึงศูนย์เท่านั้น — เตือนแรงก่อนของหาย
+- **Renewal token (ตัวต่ออายุ)** (`Settings.renewal`) — คลิกขวาถือ token มือหนึ่ง + ไอเทมจับเวลาอีกมือหนึ่ง = ต่ออายุตาม `add_time` และหัก token 1 ชิ้น; token เป็น vanilla material หรือ custom item ก็ได้ (เช่นแจกจาก CrazyCrates); กันคลิกซ้ำด้วย cooldown; บันทึก audit อัตโนมัติ
+- **Restore reminder ตอน join** — แอดมินที่มีไอเทมของตัวเองค้างใน recovery log จะเห็น "มีไอเทมหมดอายุ N ชิ้นรอกู้คืน" ทันทีที่เข้าเซิร์ฟ
+- **Discord webhook แบบ embed** (`discord_webhook.use_embed`) — ส่งเป็น rich embed (title / description / สี / timestamp) แทนข้อความธรรมดา
+
+### Technical
+- `PdcCompat` เพิ่ม key `timeditem:transform` (STRING) เก็บ profile key ต่อไอเทม (ถูกลบพร้อม timer เมื่อ remove)
+- คำสั่ง `/ti set|give` แยก token `transform:<key>` ออกจากพารามิเตอร์เวลาก่อน parse — วางตำแหน่งไหนก็ได้หลัง subcommand; key ไม่มีจริง = แจ้งเตือนทันที
+- Renewal ทำงานกับ timer ทุกประเภท (expire ต่อจากเวลาที่เหลือ, lifetime ยังไม่เริ่ม +, paused +)
+- Unit tests ใหม่: `TransformsTest` (parse profile, ข้าม key พัง, case-insensitive), `DiscordWebhookTest` เพิ่ม embed JSON (title/description/color/timestamp) — รวม 78 ชุด
+- Smoke test บน Paper จริง: boot สะอาด + config self-heal ครบทุก section + fresh install ได้ config-version 10
+
 ## [2.7.0] - 2026-10-26
 
 ### Added

@@ -39,6 +39,8 @@ public final class DiscordWebhook {
      * expiry), {item} and {world} in the configured message template.
      * {item} resolves through the integration hooks: a custom item's
      * display name or plugin:id, falling back to the material name.
+     * With use_embed the template becomes the embed description instead
+     * of the plain message content.
      */
     public void notifyExpiry(ItemStack item, Player player, World world, PluginConfig config) {
         String url = config.getDiscordWebhookUrl();
@@ -50,11 +52,17 @@ public final class DiscordWebhook {
                 .replace("{item}", plugin.hooks() == null
                         ? item.getType().name() : plugin.hooks().describe(item))
                 .replace("{world}", world == null ? "-" : world.getName());
-        post(url, config.getDiscordWebhookUsername(), message);
+        if (config.isDiscordWebhookUseEmbed()) {
+            String payload = buildEmbedPayload(config.getDiscordWebhookUsername(),
+                    config.getDiscordWebhookEmbedTitle(), message,
+                    config.getDiscordWebhookEmbedColor(), java.time.Instant.now().toString());
+            post(url, payload);
+        } else {
+            post(url, buildPayload(config.getDiscordWebhookUsername(), message));
+        }
     }
 
-    private void post(final String url, final String username, final String message) {
-        final String payload = buildPayload(username, message);
+    private void post(final String url, final String payload) {
         poster.execute(() -> {
             try {
                 HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
@@ -89,6 +97,38 @@ public final class DiscordWebhook {
     static String buildPayload(String username, String content) {
         StringBuilder out = new StringBuilder("{\"content\":");
         appendJsonString(out, content);
+        if (username != null && !username.isEmpty()) {
+            out.append(",\"username\":");
+            appendJsonString(out, username);
+        }
+        return out.append('}').toString();
+    }
+
+    /**
+     * JSON body with one embed (pure - unit tested). The message
+     * template becomes the embed description; title, color and the
+     * ISO-8601 timestamp (shown as the embed footer time) are optional.
+     */
+    static String buildEmbedPayload(String username, String title, String description,
+                                    int color, String timestamp) {
+        StringBuilder out = new StringBuilder("{\"embeds\":[{");
+        boolean first = true;
+        if (title != null && !title.isEmpty()) {
+            out.append("\"title\":");
+            appendJsonString(out, title);
+            first = false;
+        }
+        if (!first) {
+            out.append(',');
+        }
+        out.append("\"description\":");
+        appendJsonString(out, description);
+        out.append(",\"color\":").append(color & 0xffffff);
+        if (timestamp != null && !timestamp.isEmpty()) {
+            out.append(",\"timestamp\":");
+            appendJsonString(out, timestamp);
+        }
+        out.append("}]");
         if (username != null && !username.isEmpty()) {
             out.append(",\"username\":");
             appendJsonString(out, username);

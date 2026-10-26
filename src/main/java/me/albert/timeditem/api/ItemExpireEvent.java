@@ -14,7 +14,10 @@ import org.jetbrains.annotations.Nullable;
  * time).
  *
  * The player is null when the item expires outside an inventory, for
- * example on the ground or in an item frame.
+ * example on the ground or in an item frame. The replacement item
+ * (expiry transformation, 2.8+) can be swapped or cleared with
+ * {@link #setReplacement(ItemStack)} - null means the item just
+ * disappears.
  */
 public class ItemExpireEvent extends Event implements Cancellable {
 
@@ -22,6 +25,7 @@ public class ItemExpireEvent extends Event implements Cancellable {
 
     private final ItemStack item;
     private final Player player;
+    private ItemStack replacement;
     private boolean cancelled;
 
     public ItemExpireEvent(ItemStack item, @Nullable Player player) {
@@ -37,6 +41,20 @@ public class ItemExpireEvent extends Event implements Cancellable {
     @Nullable
     public Player getPlayer() {
         return player;
+    }
+
+    /**
+     * The item the expiring item turns into (expiry transformation), or
+     * null when it should simply disappear.
+     */
+    @Nullable
+    public ItemStack getReplacement() {
+        return replacement;
+    }
+
+    /** Overrides the transformation result; null disables the transformation. */
+    public void setReplacement(@Nullable ItemStack replacement) {
+        this.replacement = replacement;
     }
 
     @Override
