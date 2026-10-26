@@ -27,6 +27,7 @@
 - [⚙️ การตั้งค่า](#️-การตั้งค่า)
 - [🌐 หลายภาษา](#-หลายภาษา)
 - [💬 Discord](#-discord)
+- [🧩 Integration ปลั๊กอินอื่น](#-integration-ปลั๊กอินอื่น)
 - [🔌 Developer API](#-developer-api)
 - [💾 การจัดเก็บข้อมูล](#-การจัดเก็บข้อมูล)
 - [🍃 Folia & ความเข้ากันได้](#-folia--ความเข้ากันได้)
@@ -46,13 +47,14 @@
 | 🔔 | **เตือนล่วงหน้า** | ข้อความ + เสียง + actionbar countdown หลายระยะ เช่น 10 นาที / 1 นาที / 10 วินาที |
 | 💬 | **Discord webhook ในตัว** | แจ้ง Discord ทุกครั้งที่ไอเทมหมดอายุ ไม่ต้องติดตั้งปลั๊กอินอื่น |
 | 🌐 | **หลายภาษา** | อังกฤษ / ไทย พร้อมใช้ หรือวางไฟล์ภาษาของคุณเอง — GUI ก็เปลี่ยนตาม |
+| 🧩 | **Integration 9 ปลั๊กอิน** | MMOItems · ItemsAdder · Oraxen · Nexo · ExecutableItems · Slimefun · EcoItems · Shopkeepers · CrazyCrates — สร้างของ custom เป็น timed item ได้โดยตรง (ตั้งแต่ 2.6.0) |
 | 🍃 | **รองรับ Folia** | ทำงานถูกต้องบน threading แบบ region (ตั้งแต่ 2.4.0) |
 | 🔌 | **Developer API** | Events, Facade, PlaceholderAPI — ผสานกับปลั๊กอินของคุณได้ทันที |
 | ♻️ | **กู้คืนได้** | ทุกไอเทมที่หมดอายุถูกบันทึกไว้ แอดมินคืนให้ผู้เล่นได้ด้วยคลิกเดียว |
 
 ## 🚀 เริ่มใช้ใน 1 นาที
 
-1. ดาวน์โหลด `TimedItem-2.5.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
+1. ดาวน์โหลด `TimedItem-2.6.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
 2. รีสตาร์ทเซิร์ฟเวอร์ — เสร็จ! (ค่า default ใช้ได้ทันที)
 3. ลองเลย:
 
@@ -61,6 +63,7 @@
 /ti set 1d12h30m     # ให้ไอเทมหมดอายุใน 1 วัน 12 ชั่วโมง 30 นาที
 /ti menu             # เปิด GUI ตั้งค่าแบบคลิก
 /ti give Steve 30m   # ส่งไอเทม timed ให้ผู้เล่น
+/ti give Steve mmoitems:SWORD:CUTLASS 30d   # สร้างของจาก MMOItems เป็น timed item โดยตรง
 ```
 
 > **Build จากซอร์ส:** ต้องมี JDK 8+ (แนะนำ 17/21) และ Maven → `mvn package` ได้ไฟล์ที่ `target/` (unit tests รันอัตโนมัติระหว่าง build)
@@ -75,6 +78,7 @@ Permission ทั้งหมด: `timeditem.admin` (default: op) — ทุก�
 | `/ti set <เวลา>` | ประทับเวลาบนไอเทมที่ถือ เช่น `/ti set 1d12h30m` หรือแบบเก่า `/ti set 120 s` |
 | `/ti add <เวลา>` | ต่อเวลา — ใช้ได้ทั้งไอเทมที่เริ่มนับแล้ว, ยังไม่เริ่ม และ paused |
 | `/ti give <ผู้เล่น> <เวลา> [จำนวน]` | หยิบไอเทมในมือ ตั้งเวลา แล้วส่งให้ผู้เล่นเป้าหมายทันที (default 1 ชิ้น, หักจากมือผู้ส่ง) |
+| `/ti give <ผู้เล่น> <plugin:id> <เวลา> [จำนวน]` | สร้างของ custom จากปลั๊กอินที่ integrate เป็น timed item ทันที เช่น `/ti give Steve mmoitems:SWORD:CUTLASS 30d` — console ใช้ได้ (ดู [Integration](#-integration-ปลั๊กอินอื่น)) |
 | `/ti pause` | หยุดเวลาชั่วคราว — ไอเทมไม่หมดอายุระหว่างหยุด |
 | `/ti resume` | เดินเวลาต่อจากเดิม |
 | `/ti remove` | ถอด timer ออกจากไอเทมที่ถือ |
@@ -118,6 +122,7 @@ Permission ทั้งหมด: `timeditem.admin` (default: op) — ทุก�
 | `Settings.discord_webhook.*` | แจ้ง Discord ทุกครั้งที่หมดอายุ (ดู[ด้านล่าง](#-discord)) |
 | `Settings.recovery.*` | บันทึกของที่หมดอายุไว้กู้คืน (เปิด default, 500 รายการ / 7 วัน) |
 | `Settings.blacklist.materials` | material ที่ห้ามมี timer เช่น `[TOTEM_OF_UNDYING]` — บังคับทุกทางรวม API |
+| `Hooks.*` | เปิด/ปิด integration รายปลั๊กอิน + auto-timer ของ Shopkeepers/CrazyCrates (ดู[ด้านล่าง](#-integration-ปลั๊กอินอื่น)) |
 | `Settings.update_check.*` | เช็คเวอร์ชันใหม่จาก GitHub Releases |
 | `Settings.metrics` | bStats anonymous statistics |
 | `Settings.debug` | verbose `[Debug]` log ในคอนโซล (default `false`) — สลับได้ทันทีด้วย `/ti debug on\|off` |
@@ -161,6 +166,52 @@ expiry_commands:
   - "discord message timed-items {player}'s timed item expired!"
 ```
 
+## 🧩 Integration ปลั๊กอินอื่น
+
+ตั้งแต่ 2.6.0 TimedItem ตรวจจับปลั๊กอินเหล่านี้อัตโนมัติตอนสตาร์ท (ทั้งหมดเป็น **optional** — ไม่มีติดตั้งก็รันปกติ, ปิดรายตัวได้ที่ `Hooks.<plugin>: false`):
+
+| ปลั๊กอิน | ทำอะไรได้ |
+|---|---|
+| **MMOItems** | จำไอเทมได้ (type:id จาก MythicLib NBT) + สร้างของเป็น timed item ได้ |
+| **ItemsAdder** | จำไอเทมได้ (namespace:id) + สร้างของเป็น timed item ได้ |
+| **Oraxen / Nexo** | จำไอเทมได้ (item id) + สร้างของเป็น timed item ได้ |
+| **ExecutableItems** | จำไอเทมได้ (executable item id) + สร้างของเป็น timed item ได้ |
+| **Slimefun** | จำไอเทมได้ (Slimefun id) + สร้างของเป็น timed item ได้ |
+| **EcoItems** | สร้างของจาก id เป็น timed item ได้ (จำจากไอเทมในมือเป็นแบบ best-effort) |
+| **CrazyCrates** | สร้าง prize จาก crate เป็น timed item ได้ + auto-timer ตอนเปิด crate |
+| **Shopkeepers** | auto-timer — ของที่ผู้เล่นซื้อจากร้านจะมีเวลาหมดอายุอัตโนมัติ |
+
+**1) สร้างของ custom เป็น timed item โดยตรง** — ไม่ต้องหยิบของในมือ, console ใช้ได้:
+
+```
+/ti give Steve mmoitems:SWORD:CUTLASS 30d        # MMOItems <TYPE>:<ID>
+/ti give Steve itemsadder:iasurvival:ruby_sword 7d
+/ti give Steve oraxen:amethyst_sword 7d
+/ti give Steve nexo:amethyst_sword 7d
+/ti give Steve ei:GKIT 24h                       # ExecutableItems (alias ei)
+/ti give Steve slimefun:DAEMON_SWORD 12h
+/ti give Steve cc:Classic:GKITS 3d               # CrazyCrates <crate>:<prize> (alias cc)
+```
+
+รูปแบบ `<plugin>:<id>` — ตำแหน่งที่ 3 ของคำสั่งถ้ามี `:` จะถือว่าเป็นของ custom ทันที (syntax เดิมที่ใช้ของในมือยังทำงานเหมือนเดิม) พร้อม `%timeditem_itemid%` (PlaceholderAPI) และ webhook Discord `{item}` จะโชว์ชื่อจริงของของ custom แทนชื่อ material
+
+**2) Auto-timer** — ของที่แจกออกจากระบบอื่นจะได้เวลาหมดอายุอัตโนมัติ (default **ปิด**, เติมเวลาเพื่อเปิด):
+
+```yaml
+Hooks:
+  shopkeepers:
+    enabled: true
+    auto_timer: "30d"     # ของที่ซื้อจากร้านหมดอายุใน 30 วัน ("" = ปิด)
+  crazycrates:
+    enabled: true
+    auto_timer: "7d"      # ของที่ได้จาก crate หมดอายุใน 7 วัน
+```
+
+> **หมายเหตุ**
+> - Hook ทำงานผ่าน **reflection ทั้งหมด** — ไม่เพิ่ม dependency, jar เดียวเหมือนเดิม; เวอร์ชัน API ที่ออกแบบกับ: MMOItems 6.10.x · ItemsAdder 4.x · Oraxen 2.x · Nexo 1.x · ExecutableItems ล่าสุด (SCore) · Slimefun RC-38 · Shopkeepers 2.20+ (ต้อง ≥ 2.19 สำหรับ auto-timer) · CrazyCrates ล่าสุด ถ้าเวอร์ชัน API ไม่ตรง hook ตัวนั้นจะปิดตัวเองอย่างปลอดภัย (ดูได้ที่ `/ti debug export`)
+> - **MythicMobs ยังไม่รองรับ** — item ของ MythicMobs เป็น vanilla stack ไม่มี tag ระบุตัวตน จึงไม่มีทางจำ/สร้างที่เชื่อถือได้ (ใช้ `/ti give` ธรรมดากับของที่สร้างไว้แทน)
+> - ของ custom ที่ติด timer จะถูกเก็บ NBT เต็มตอนหมดอายุ (`recovery.log`) — กู้คืนแล้วของยังเป็นของปลั๊กอินเดิมครบทุกอย่าง
+
 ## 🔌 Developer API
 
 **Events** (package `me.albert.timeditem.api`):
@@ -190,7 +241,7 @@ TimedItemAPI.setExpiryFromNow(item, 600)  // เช่นเดียวกั�
 TimedItemAPI.pause(item) / resume(item) / clear(item)
 ```
 
-**PlaceholderAPI** (soft-depend — ไม่มี PAPI ก็รันปกติ): `%timeditem_remaining%` (raw วินาที) · `%timeditem_time%` (pretty) · `%timeditem_type%` · `%timeditem_date%` — อ้างจากไอเทมในมือหลัก
+**PlaceholderAPI** (soft-depend — ไม่มี PAPI ก็รันปกติ): `%timeditem_remaining%` (raw วินาที) · `%timeditem_time%` (pretty) · `%timeditem_type%` · `%timeditem_date%` · `%timeditem_itemid%` (2.6.0+: `plugin:id` ของ item custom หรือชื่อ material) — อ้างจากไอเทมในมือหลัก
 
 ## 💾 การจัดเก็บข้อมูล
 
@@ -217,6 +268,7 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 | เวอร์ชัน | สรุป |
 |---|---|
+| **v2.6.0** | Integration 9 ปลั๊กอิน — `/ti give <player> <plugin:id> <time>` (MMOItems/ItemsAdder/Oraxen/Nexo/ExecutableItems/Slimefun/EcoItems/CrazyCrates) · auto-timer ร้านค้า Shopkeepers + crate CrazyCrates (`Hooks.*`) · `{item}` ใน webhook + `%timeditem_itemid%` โชว์ของ custom จริง |
 | **v2.5.0** | ระบบ debug & diagnostics — `/ti debug on\|off\|export` · จับ log 500 แถว · verbose `[Debug]` log · รายงานบั๊ก (ไม่มีข้อมูล webhook URL/item/player) |
 | **v2.4.1** | Ground expiry บน Folia สมบูรณ์ (per-entity scheduler tracking — spawn/chunk load/interact) |
 | **v2.4.0** | Folia support · Discord webhook ในตัว · multi-language (`Settings.language` + `lang/`) · recovery.log เขียนบน background thread · PDC reflection cache · GUI ตามภาษา |
@@ -231,6 +283,7 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 - compile กับ `spigot-api 1.13.2` + `api-version: '1.13'` → jar เดียว 1.13 → 26.x, ไม่แตะ internals
 - `PdcCompat` / `HealthCompat` / `ParticleCompat` resolve ผ่าน reflection (รองรับ enum→interface ทุกจุด: Sound, Attribute, Particle) — Methods ถูก cache ตอน init
+- `hook/` — integration กับ plugin อื่น **ไม่คอมไพล์เทียบ API ภายนอกเลย**: adapter ทุกตัว resolve ผ่าน `HookReflection` (probe ชื่อ class หลาย candidate ต่อเวอร์ชัน), hook class โหลดเฉพาะเมื่อ plugin เป้าหมาย enabled (pattern เดียวกับ PlaceholderAPI) และ event hooks (Shopkeepers/CrazyCrates) ลงทะเบียนผ่าน `EventExecutor` ดิบ + `HandlerList` เพื่อไม่ผูกกับ event class ของปลั๊กอินอื่นตอน compile — API เปลี่ยน = hook ปิดตัวเองเงียบๆ ไม่มีวัน crash
 - **Folia:** ตรวจจับผ่าน `RegionizedServer` class — scheduler ทั้งหมดผ่าน `SchedulerCompat` (global region / entity / async scheduler ด้วย reflection); periodic scan กับ actionbar enqueue ต่อผู้เล่นด้วย entity scheduler; ground expiry ใช้ `FoliaGroundExpiry` — entity แต่ละตัวถือ repeating check บน scheduler ของตัวเอง (tracked จาก spawn/chunk load/interact, self-cancel เมื่อไม่มี timed item); recovery store ใช้ lock + snapshot จึงไหวกับหลาย region thread
 - ทุกกรณีหมดอายุ (ผู้เล่น / พื้น-เฟรม-stand) ผ่าน `ExpiryService` เส้นเดียวกัน — event, recovery, เอฟเฟกต์ และ `expiry_commands` สม่ำเสมอทั้งสองฝั่ง
 - `TimeLore.analyze` อ่านข้อมูลครั้งเดียวต่อ stack (TimerInfo) — hot path ไม่ copy ItemMeta ซ้ำ

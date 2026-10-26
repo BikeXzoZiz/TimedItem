@@ -38,6 +38,7 @@ public final class TimedItemCommand implements CommandExecutor {
             // the session switch follows the config on every reload
             DebugLog.setEnabled(config.isDebugEnabled());
             plugin.recoveryStore().load();
+            plugin.hooks().applyConfig();
             plugin.startTasks();
             sender.sendMessage(config.getPrefix() + config.getConfigReload());
             return true;
@@ -273,8 +274,17 @@ public final class TimedItemCommand implements CommandExecutor {
      * into a timed item expiring in <time> and hands it to the target.
      * The time is one token such as 1d12h (the legacy two-token form is
      * not supported here because the last argument is the amount).
+     *
+     * /ti give <player> <plugin>:<id> <time> [amount] - builds a custom
+     * item from an integrated plugin (mmoitems:SWORD:CUTLASS,
+     * itemsadder:namespace:id, cc:Classic:GKITS, ...) instead; the
+     * sender needs no item in hand, so console works too.
      */
     private void handleGive(CommandSender sender, String[] args, PluginConfig config) {
+        if (args.length >= 3 && args[2].indexOf(':') >= 0) {
+            handleGiveCustom(sender, args, config);
+            return;
+        }
         Player player = requirePlayer(sender, config);
         if (player == null) {
             return;
@@ -332,6 +342,66 @@ public final class TimedItemCommand implements CommandExecutor {
         player.sendMessage(config.getPrefix() + config.getGiveSent()
                 .replace("{time}", pretty).replace("{player}", target.getName()));
         if (!target.equals(player)) {
+            target.sendMessage(config.getPrefix() + config.getGiveReceived()
+                    .replace("{time}", pretty));
+        }
+    }
+
+    /**
+     * /ti give <player> <plugin>:<id> <time> [amount] - hands the target
+     * a timed copy of a custom item built by an integrated plugin.
+     */
+    private void handleGiveCustom(CommandSender sender, String[] args, PluginConfig config) {
+        if (args.length < 4) {
+            sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
+            return;
+        }
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) {
+            sender.sendMessage(config.getPrefix()
+                    + config.getTargetNotFound().replace("{player}", args[1]));
+            return;
+        }
+        String token = args[2];
+        ItemStack built = plugin.hooks().build(token);
+        if (built == null) {
+            sender.sendMessage(config.getPrefix()
+                    + config.getItemNotFound().replace("{id}", token));
+            return;
+        }
+        long seconds = DurationParser.parse(args[3], config.unitSeconds());
+        if (seconds <= 0) {
+            sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
+            return;
+        }
+        int amount = 1;
+        if (args.length >= 5) {
+            try {
+                amount = Integer.parseInt(args[4]);
+            } catch (NumberFormatException e) {
+                sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
+                return;
+            }
+        }
+        if (amount < 1) {
+            sender.sendMessage(config.getPrefix() + config.getInvalidUsage());
+            return;
+        }
+        if (TimeLore.isBlacklisted(built, config)) {
+            sender.sendMessage(config.getPrefix() + config.getMaterialBlacklisted());
+            return;
+        }
+        amount = Math.min(amount, built.getMaxStackSize());
+        built.setAmount(amount);
+        TimeLore.applyExpiry(built, config, seconds);
+        Map<Integer, ItemStack> leftover = target.getInventory().addItem(built);
+        for (ItemStack rest : leftover.values()) {
+            target.getWorld().dropItemNaturally(target.getLocation(), rest);
+        }
+        String pretty = TimeLore.formatDuration(seconds, config);
+        sender.sendMessage(config.getPrefix() + config.getGiveSent()
+                .replace("{time}", pretty).replace("{player}", target.getName()));
+        if (!target.equals(sender)) {
             target.sendMessage(config.getPrefix() + config.getGiveReceived()
                     .replace("{time}", pretty));
         }

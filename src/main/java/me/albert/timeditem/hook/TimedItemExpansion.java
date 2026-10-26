@@ -70,6 +70,8 @@ public final class TimedItemExpansion extends PlaceholderExpansion {
                     return "expire";
                 case "date":
                     return TimeLore.LORE_FORMAT.format(info.getExpiry());
+                case "itemid":
+                    return itemId(item);
                 default:
                     return null;
             }
@@ -84,8 +86,25 @@ public final class TimedItemExpansion extends PlaceholderExpansion {
                 return info.getType() == TimeLore.Type.PAUSED ? "paused" : "lifetime";
             case "date":
                 return null;
+            case "itemid":
+                return itemId(item);
             default:
                 return null;
         }
+    }
+
+    /**
+     * %timeditem_itemid% - the hook id of a custom item
+     * (mmoitems:SWORD:CUTLASS), or the lowercase material name for
+     * vanilla stacks.
+     */
+    private String itemId(ItemStack item) {
+        if (plugin.hooks() != null) {
+            String id = plugin.hooks().itemId(item);
+            if (id != null) {
+                return id;
+            }
+        }
+        return item.getType().name().toLowerCase(java.util.Locale.ROOT);
     }
 }

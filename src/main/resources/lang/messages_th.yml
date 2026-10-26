@@ -17,7 +17,7 @@ Messages:
   timer_not_started: "&7ตัวจับเวลาบนไอเทมนี้ยังไม่เริ่มนับ"
   already_paused: "&7ตัวจับเวลาบนไอเทมนี้หยุดอยู่แล้ว"
   already_running: "&7ตัวจับเวลาบนไอเทมนี้นับอยู่แล้ว"
-  invalid_usage: "&cวิธีใช้: /ti set <เวลา>, /ti add <เวลา>, /ti give <ผู้เล่น> <เวลา> [จำนวน], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload"
+  invalid_usage: "&cวิธีใช้: /ti set <เวลา>, /ti add <เวลา>, /ti give <ผู้เล่น> [plugin:ไอดี] <เวลา> [จำนวน], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload"
   config_reload: "&aโหลด config ของ TimedItem ใหม่แล้ว"
   time_set: "&aตั้งตัวจับเวลา: &e{time}"
   info_remaining: "&7เวลาที่เหลือ: &e{time}"
@@ -35,6 +35,7 @@ Messages:
   debug_exported: "&aเขียนรายงาน debug ไปที่ &e{file}"
   debug_export_failed: "&cเขียนรายงาน debug ไม่สำเร็จ: &7{error}"
   debug_usage: "&7วิธีใช้: /ti debug [on|off|export]"
+  item_not_found: "&cไม่พบ custom item: &e{id}&c ใช้รูปแบบ <plugin>:<ไอดี> เช่น mmoitems:SWORD:CUTLASS"
 
 DateFormat:
   # Prefix ที่เขียนลง lore ของไอเทม — ห้ามแก้หลังมีไอเทมที่มี timer อยู่แล้ว

@@ -37,6 +37,8 @@ public final class DiscordWebhook {
     /**
      * Sends the expiry notification, replacing {player} (- for ground
      * expiry), {item} and {world} in the configured message template.
+     * {item} resolves through the integration hooks: a custom item's
+     * display name or plugin:id, falling back to the material name.
      */
     public void notifyExpiry(ItemStack item, Player player, World world, PluginConfig config) {
         String url = config.getDiscordWebhookUrl();
@@ -45,7 +47,8 @@ public final class DiscordWebhook {
         }
         String message = config.getDiscordWebhookMessage()
                 .replace("{player}", player == null ? "-" : player.getName())
-                .replace("{item}", item.getType().name())
+                .replace("{item}", plugin.hooks() == null
+                        ? item.getType().name() : plugin.hooks().describe(item))
                 .replace("{world}", world == null ? "-" : world.getName());
         post(url, config.getDiscordWebhookUsername(), message);
     }

@@ -54,6 +54,7 @@ public final class PluginConfig {
     private String debugExported;
     private String debugExportFailed;
     private String debugUsage;
+    private String itemNotFound;
 
     private String expiresAtPrefix;
     private String usefulLifePrefix;
@@ -120,6 +121,15 @@ public final class PluginConfig {
     private String guiRestorePrev;
     private String guiRestoreNext;
     private Set<Material> blacklistedMaterials;
+    private Set<String> disabledHooks;
+    private String shopkeepersAutoTimer;
+    private String crazycratesAutoTimer;
+
+    /** Hook ids that can be switched off under Hooks.* in config.yml. */
+    private static final String[] HOOK_IDS = {
+            "mmoitems", "itemsadder", "oraxen", "nexo", "executableitems",
+            "slimefun", "ecoitems", "shopkeepers", "crazycrates"
+    };
 
     public PluginConfig(TimedItemPlugin plugin) {
         this.plugin = plugin;
@@ -128,7 +138,7 @@ public final class PluginConfig {
     public void load() {
         plugin.saveDefaultConfig();
         FileConfiguration raw = plugin.getConfig();
-        raw.addDefault("config-version", 7);
+        raw.addDefault("config-version", 8);
         raw.addDefault("Settings.language", "en");
         raw.addDefault("Settings.start_date_calculate_on_click", true);
         raw.addDefault("Settings.reset_player_health_if_armor", true);
@@ -165,6 +175,17 @@ public final class PluginConfig {
         raw.addDefault("Settings.recovery.max_items", 500);
         raw.addDefault("Settings.recovery.keep_days", 7);
         raw.addDefault("Settings.blacklist.materials", new java.util.ArrayList<String>());
+        raw.addDefault("Hooks.mmoitems", true);
+        raw.addDefault("Hooks.itemsadder", true);
+        raw.addDefault("Hooks.oraxen", true);
+        raw.addDefault("Hooks.nexo", true);
+        raw.addDefault("Hooks.executableitems", true);
+        raw.addDefault("Hooks.slimefun", true);
+        raw.addDefault("Hooks.ecoitems", true);
+        raw.addDefault("Hooks.crazycrates.enabled", true);
+        raw.addDefault("Hooks.crazycrates.auto_timer", "");
+        raw.addDefault("Hooks.shopkeepers.enabled", true);
+        raw.addDefault("Hooks.shopkeepers.auto_timer", "");
         raw.options().copyDefaults(true);
         plugin.saveConfig();
 
@@ -231,6 +252,18 @@ public final class PluginConfig {
         }
         blacklistedMaterials = Collections.unmodifiableSet(blacklisted);
 
+        Set<String> disabled = new HashSet<String>();
+        for (String hook : HOOK_IDS) {
+            if (!raw.getBoolean("Hooks." + hook, true)) {
+                disabled.add(hook);
+            }
+        }
+        disabledHooks = Collections.unmodifiableSet(disabled);
+        String shopTimer = raw.getString("Hooks.shopkeepers.auto_timer", "");
+        shopkeepersAutoTimer = shopTimer == null ? "" : shopTimer.trim();
+        String crateTimer = raw.getString("Hooks.crazycrates.auto_timer", "");
+        crazycratesAutoTimer = crateTimer == null ? "" : crateTimer.trim();
+
         // GUI labels also come from the language file.
         guiMenuTitle = color(lang.getString("Gui.menu_title"));
         guiPresetLore = color(lang.getString("Gui.preset_lore"));
@@ -288,6 +321,7 @@ public final class PluginConfig {
         debugExported = color(lang.getString("Messages.debug_exported"));
         debugExportFailed = color(lang.getString("Messages.debug_export_failed"));
         debugUsage = color(lang.getString("Messages.debug_usage"));
+        itemNotFound = color(lang.getString("Messages.item_not_found"));
 
         expiresAtPrefix = color(lang.getString("DateFormat.expires_at"));
         usefulLifePrefix = color(lang.getString("DateFormat.useful_life"));
@@ -431,6 +465,25 @@ public final class PluginConfig {
 
     public String getDebugUsage() {
         return debugUsage;
+    }
+
+    public String getItemNotFound() {
+        return itemNotFound;
+    }
+
+    /** True unless the hook was switched off under Hooks.&lt;id&gt; in config.yml. */
+    public boolean isHookEnabled(String id) {
+        return !disabledHooks.contains(id.toLowerCase(Locale.ROOT));
+    }
+
+    /** Hooks.shopkeepers.auto_timer - empty means the hook is off. */
+    public String getShopkeepersAutoTimer() {
+        return shopkeepersAutoTimer;
+    }
+
+    /** Hooks.crazycrates.auto_timer - empty means the hook is off. */
+    public String getCrazyCratesAutoTimer() {
+        return crazycratesAutoTimer;
     }
 
     public String getExpiresAtPrefix() {
@@ -769,7 +822,7 @@ public final class PluginConfig {
         lang.addDefault("Messages.already_paused", "&7The timer on this item is already paused.");
         lang.addDefault("Messages.already_running", "&7The timer on this item is already running.");
         lang.addDefault("Messages.invalid_usage",
-                "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload");
+                "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> [plugin:id] <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload");
         lang.addDefault("Messages.config_reload", "&aTimedItem config reloaded.");
         lang.addDefault("Messages.time_set", "&aTimer set: &e{time}");
         lang.addDefault("Messages.info_remaining", "&7Time remaining: &e{time}");
@@ -795,6 +848,8 @@ public final class PluginConfig {
         lang.addDefault("Messages.debug_export_failed",
                 "&cCould not write the debug report: &7{error}");
         lang.addDefault("Messages.debug_usage", "&7Usage: /ti debug [on|off|export]");
+        lang.addDefault("Messages.item_not_found",
+                "&cUnknown custom item: &e{id}&c. Use <plugin>:<id>, e.g. mmoitems:SWORD:CUTLASS.");
         lang.addDefault("DateFormat.expires_at", "&cExpires: ");
         lang.addDefault("DateFormat.useful_life", "&7Lifetime: ");
         lang.addDefault("DateFormat.paused", "&7Paused: ");

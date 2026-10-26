@@ -17,7 +17,7 @@ Messages:
   timer_not_started: "&7The timer on this item has not started yet."
   already_paused: "&7The timer on this item is already paused."
   already_running: "&7The timer on this item is already running."
-  invalid_usage: "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload"
+  invalid_usage: "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> [plugin:id] <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload"
   config_reload: "&aTimedItem config reloaded."
   time_set: "&aTimer set: &e{time}"
   info_remaining: "&7Time remaining: &e{time}"
@@ -35,6 +35,7 @@ Messages:
   debug_exported: "&aDebug report written to &e{file}"
   debug_export_failed: "&cCould not write the debug report: &7{error}"
   debug_usage: "&7Usage: /ti debug [on|off|export]"
+  item_not_found: "&cUnknown custom item: &e{id}&c. Use <plugin>:<id>, e.g. mmoitems:SWORD:CUTLASS."
 
 DateFormat:
   # Lore prefixes shown on timed items. Changing these after items with

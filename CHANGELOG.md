@@ -2,6 +2,26 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [2.6.0] - 2026-10-26
+
+### Added
+- **Integration 9 ปลั๊กอินยอดนิยม** (ระบบ `Hooks.*` ใน config, ตรวจจับอัตโนมัติ, ปิดรายตัวได้, optional ทั้งหมด — ไม่มีติดตั้งก็รันเหมือนเดิม):
+  - **Item plugins** — MMOItems · ItemsAdder · Oraxen · Nexo · ExecutableItems · Slimefun · EcoItems: จำตัวตน item ของปลั๊กอินนั้น (เช่น `mmoitems:SWORD:CUTLASS`, `itemsadder:namespace:id`)
+  - **CrazyCrates** — สร้าง prize จาก crate (`cc:<crate>:<prize>`) เป็น timed item ได้
+  - **Distribution auto-timer** — Shopkeepers (ของที่ซื้อจากร้าน) และ CrazyCrates (ของจากการเปิด crate) ใส่เวลาหมดอายุอัตโนมัติตาม `Hooks.<plugin>.auto_timer` (default ปิด; ไม่ซ้อน timer เดิม, เคารพ material blacklist)
+- **`/ti give <player> <plugin:id> <time> [amount]`** — สร้างของ custom จาก plugin ที่ integrate เป็น timed item ทันที ไม่ต้องหยิบของในมือ → console ใช้ได้; syntax เดิม (ของในมือ) ทำงานเหมือนเดิม; tab completion เสนอ prefix ของ plugin ที่ hook อยู่
+- **`%timeditem_itemid%`** (PlaceholderAPI) — คืน `plugin:id` ของ item custom หรือชื่อ material
+- **Discord webhook `{item}`** — โชว์ display name ของ item (ตัดรหัสสี), หรือ `plugin:id` สำหรับ item custom ที่ไม่มี display name แทนชื่อ material ดิบ
+- **`/ti debug export`** — รายงานบั๊กมีรายการ hooks ที่ active/off ทั้งหมด
+
+### Technical
+- Integration ทั้งหมดเป็น **reflection ล้วน** (`hook/HookReflection`) — ไม่เพิ่ม Maven dependency และคง Java 8 bytecode / jar เดียว 1.13–26.x; ทุก adapter probe ชื่อ class หลาย candidate รองรับเวอร์ชันเก่า/ใหม่ (Oraxen 2.x package move, CrazyCrates badbones69→ryderbelserion rewrite, MI 6.7 ก่อน/หลัง template API) — API ไม่ตรง = hook นั้นปิดตัวเองอย่างปลอดภัย
+- Event hooks (Shopkeepers/CrazyCrates) ลงทะเบียนผ่าน `EventExecutor` + `HandlerList` โดยตรง ไม่ผูก event class ของปลั๊กอินอื่นตอน compile; ยกเลิก/ลงทะเบียนใหม่ได้ทุก `/ti reload`
+- `plugin.yml` เพิ่ม softdepend: MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, Slimefun, ExecutableItems, SCore, EcoItems, Shopkeepers, CrazyCrates; `config-version` 8; ข้อความใหม่ `Messages.item_not_found` (en/th)
+
+### ไม่รองรับ (โดยการออกแบบ)
+- **MythicMobs** — item ของ MythicMobs เป็น vanilla stack ไม่มี tag ระบุตัวตน จึงไม่มีจุด hook ที่เชื่อถือได้ (ไม่ใช่ข้อจำกัดของ TimedItem)
+
 ## [2.5.0] - 2026-10-26
 
 ### Added

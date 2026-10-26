@@ -38,6 +38,7 @@ public final class DebugReport {
         public boolean pdcAvailable;
         public String itemFormat = "";
         public boolean placeholderApi;
+        public String hooks = "";
         public int onlinePlayers;
         public int worldCount;
 
@@ -77,6 +78,7 @@ public final class DebugReport {
         s.pdcAvailable = PdcCompat.isAvailable();
         s.itemFormat = ItemSerializer.currentFormat();
         s.placeholderApi = Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI");
+        s.hooks = plugin.hooks() == null ? "" : plugin.hooks().summary();
         s.onlinePlayers = Bukkit.getOnlinePlayers().size();
         s.worldCount = Bukkit.getWorlds().size();
 
@@ -135,6 +137,7 @@ public final class DebugReport {
         out.append("item_storage: ").append(s.pdcAvailable ? "PDC" : "lore")
                 .append(" (recovery format tag: ").append(s.itemFormat).append(")\n");
         out.append("placeholderapi: ").append(s.placeholderApi).append('\n');
+        out.append("hooks: ").append(s.hooks).append('\n');
         out.append("online_players: ").append(s.onlinePlayers).append('\n');
         out.append("worlds: ").append(s.worldCount).append('\n');
 

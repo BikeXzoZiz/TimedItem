@@ -14,6 +14,12 @@ import java.util.Locale;
 /** Tab completion for /ti: subcommands, time examples, online players, restore pages. */
 public final class TimedItemTabCompleter implements TabCompleter {
 
+    private final TimedItemPlugin plugin;
+
+    public TimedItemTabCompleter(TimedItemPlugin plugin) {
+        this.plugin = plugin;
+    }
+
     private static final List<String> SUBS = Arrays.asList(
             "set", "add", "give", "pause", "resume", "remove", "info", "menu", "restore",
             "debug", "reload");
@@ -42,9 +48,18 @@ public final class TimedItemTabCompleter implements TabCompleter {
                     }
                 }
             } else if (args.length == 3) {
+                // both flows: a custom item token (plugin:id) or a plain duration
+                if (plugin.hooks() != null) {
+                    filter(plugin.hooks().tokens(), args[2], out);
+                }
                 filter(TIME_HINTS, args[2], out);
             } else if (args.length == 4) {
+                // custom flow expects the duration here, the legacy
+                // flow the amount - offer both sets
+                filter(TIME_HINTS, args[3], out);
                 filter(AMOUNT_HINTS, args[3], out);
+            } else if (args.length == 5) {
+                filter(AMOUNT_HINTS, args[4], out);
             }
         } else if (sub.equals("restore")) {
             if (args.length == 2) {

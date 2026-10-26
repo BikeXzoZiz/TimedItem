@@ -1,6 +1,7 @@
 package me.albert.timeditem;
 
 import me.albert.timeditem.api.TimedItemAPI;
+import me.albert.timeditem.hook.HookManager;
 import me.albert.timeditem.hook.TimedItemExpansion;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
@@ -21,6 +22,7 @@ public final class TimedItemPlugin extends JavaPlugin {
     private RestoreMenu restoreMenu;
     private DiscordWebhook discordWebhook;
     private FoliaGroundExpiry foliaGroundExpiry;
+    private HookManager hooks;
     private SchedulerCompat.Handle expiryTask;
     private SchedulerCompat.Handle actionbarTask;
 
@@ -49,9 +51,10 @@ public final class TimedItemPlugin extends JavaPlugin {
         PluginCommand command = getCommand("timeditem");
         if (command != null) {
             command.setExecutor(new TimedItemCommand(this));
-            command.setTabCompleter(new TimedItemTabCompleter());
+            command.setTabCompleter(new TimedItemTabCompleter(this));
         }
         TimedItemAPI.init(this);
+        hooks = HookManager.create(this);
         startTasks();
         updateChecker = new UpdateChecker(this);
         Bukkit.getPluginManager().registerEvents(updateChecker, this);
@@ -103,6 +106,11 @@ public final class TimedItemPlugin extends JavaPlugin {
         return restoreMenu;
     }
 
+    /** Integrations with other item plugins (Hooks.* config section). */
+    public HookManager hooks() {
+        return hooks;
+    }
+
     @Override
     public void onDisable() {
         cancelTask(expiryTask);
@@ -115,6 +123,9 @@ public final class TimedItemPlugin extends JavaPlugin {
         }
         if (foliaGroundExpiry != null) {
             foliaGroundExpiry.stop();
+        }
+        if (hooks != null) {
+            hooks.close();
         }
         DebugLog.uninstall();
     }
