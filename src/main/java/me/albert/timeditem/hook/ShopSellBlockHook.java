@@ -9,6 +9,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Blocks listing/selling timed items on shop and auction plugins (3.1+).
@@ -17,6 +19,11 @@ import java.lang.reflect.Method;
  * versions and forks), reads the listed item through the usual getter
  * names and cancels the event when the item carries any TimedItem timer.
  *
+ * Events whose sold items sit somewhere the getter probe cannot reach
+ * (zShop wraps them in a list of shop actions) supply their own
+ * {@link ItemsOf} extractor instead - the cancel/message/sound path
+ * below stays shared.
+ *
  * Like every integration this is reflection only: a plugin version with
  * different event or getter names simply degrades to "not available"
  * instead of crashing - the verbose log notes it when debug is on.
@@ -24,6 +31,12 @@ import java.lang.reflect.Method;
 final class ShopSellBlockHook {
 
     private ShopSellBlockHook() {
+    }
+
+    /** Pulls every ItemStack the foreign event is about to sell. */
+    interface ItemsOf {
+        /** The stacks to analyze; null and an empty list both mean "nothing sellable". */
+        List<ItemStack> items(Object event);
     }
 
     /**
@@ -44,6 +57,24 @@ final class ShopSellBlockHook {
                 HookReflection.findGetter(eventClass, "getstack", ItemStack.class),
         };
         final Method playerGetter = HookReflection.findGetter(eventClass, "getplayer", Player.class);
+        return register(plugin, hookName, eventClass, playerGetter, new ItemsOf() {
+            @Override
+            public List<ItemStack> items(Object event) {
+                ItemStack item = firstItem(itemGetters, event);
+                return item == null
+                        ? Collections.<ItemStack>emptyList()
+                        : Collections.singletonList(item);
+            }
+        });
+    }
+
+    /**
+     * Registers the block hook with a custom item extractor: every stack
+     * it returns is analyzed and the first timed item cancels the event.
+     */
+    static ReflectiveEventHook.Registration register(TimedItemPlugin plugin, String hookName,
+                                                     Class<?> eventClass, Method playerGetter,
+                                                     ItemsOf itemsOf) {
         final Method cancel = HookReflection.findMethod(eventClass, "setCancelled", boolean.class);
         if (cancel == null) {
             DebugLog.verbose(hookName + ": event is not cancellable - hook disabled");
@@ -51,14 +82,24 @@ final class ShopSellBlockHook {
         }
         return ReflectiveEventHook.register(plugin, hookName,
                 new String[]{eventClass.getName()}, EventPriority.HIGHEST, true, event -> {
-                    ItemStack item = firstItem(itemGetters, event);
-                    if (item == null) {
+                    List<ItemStack> items = itemsOf.items(event);
+                    if (items == null || items.isEmpty()) {
                         return;
                     }
                     PluginConfig config = plugin.pluginConfig();
-                    TimeLore.TimerInfo info = TimeLore.analyze(item, config);
-                    if (info == null) {
-                        return; // not a timed item - selling is fine
+                    TimeLore.TimerInfo timed = null;
+                    for (ItemStack item : items) {
+                        if (item == null) {
+                            continue;
+                        }
+                        TimeLore.TimerInfo info = TimeLore.analyze(item, config);
+                        if (info != null) {
+                            timed = info;
+                            break;
+                        }
+                    }
+                    if (timed == null) {
+                        return; // no timed item in the sale - selling is fine
                     }
                     try {
                         cancel.invoke(event, true);
@@ -67,7 +108,7 @@ final class ShopSellBlockHook {
                     }
                     Player player = playerGetter == null ? null
                             : (Player) HookReflection.invoke(playerGetter, event);
-                    long remaining = remainingOf(info);
+                    long remaining = remainingOf(timed);
                     if (player != null) {
                         player.sendMessage(config.getPrefix() + config.getSellBlocked()
                                 .replace("{time}",

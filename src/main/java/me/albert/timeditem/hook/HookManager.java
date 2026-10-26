@@ -93,6 +93,9 @@ public final class HookManager {
         hookSellBlock("CrazyAuctions", "CrazyAuctions", config, new String[]{
                 "com.badbones69.crazyauctions.api.events.AuctionListEvent",
                 "com.badbones69.crazyauctions.api.events.AuctionSellEvent"});
+        // zShop carries the sold stacks on a list of ShopActions instead of
+        // a single ItemStack getter, so it gets its own hook (3.1.1+)
+        hookZShopSell(config);
         if (!active.isEmpty()) {
             plugin.getLogger().info("Hooked into item plugins: " + String.join(", ", active)
                     + " (identify + /ti give <player> <plugin>:<id> <time>).");
@@ -250,6 +253,21 @@ public final class HookManager {
             distributionRegistrations.add(registration);
             plugin.getLogger().info("Hooked into " + pluginName
                     + " (block selling timed items).");
+        }
+    }
+
+    /** zShop sell-all: the sold stacks live on ShopActions, not the event. */
+    private void hookZShopSell(PluginConfig config) {
+        if (!config.isHookEnabled("zshop")) {
+            return;
+        }
+        if (!Bukkit.getPluginManager().isPluginEnabled("zShop")) {
+            return;
+        }
+        ReflectiveEventHook.Registration registration = ZShopSellBlockHook.register(plugin, "zShop");
+        if (registration != null) {
+            distributionRegistrations.add(registration);
+            plugin.getLogger().info("Hooked into zShop (block selling timed items).");
         }
     }
 

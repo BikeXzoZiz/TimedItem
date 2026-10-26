@@ -49,7 +49,7 @@
 | 📦 | **สแกนตู้เก็บของ + Anti-hide** | ตรวจของหมดอายุในตู้ (ตอนเปิด / เป็นรอบ) · บล็อกการยัดของใกล้หมดอายุลงตู้ · มองเข้าไปใน **shulker ซ้อน** ด้วย (3.1.0) |
 | 🌍 | **Restore ข้ามเซิร์ฟ** | network mode กับฐานข้อมูลแชร์: /ti restore เห็นไอเทมที่หมดอายุจากทุกเซิร์ฟ (3.1.0) |
 | 🎮 | **ของเช่าคืนอัตโนมัติ** | /ti give ฝังเจ้าของใน NBT — หมดอายุแล้วของกลับเข้า inventory เจ้าของเอง (3.1.0) |
-| 🚫 | **บล็อกขายในร้าน** | QuickShop · zAuctionHouse · CrazyAuctions: ลงขายของจับเวลาไม่ได้ (3.1.0) |
+| 🚫 | **บล็อกขายในร้าน** | QuickShop · zAuctionHouse · CrazyAuctions · zShop: ลงขายของจับเวลาไม่ได้ (3.1.0, zShop 3.1.1) |
 | 💾 | **เก็บใน NBT** | ตัวจับเวลาอยู่ใน PersistentDataContainer ของไอเทม — แก้ lore ยังไง timer ก็ไม่หาย |
 | 🎨 | **GUI ครบ** | `/ti menu` ตั้งเวลา/หยุด-เดินเวลา · `/ti restore` กู้คืนไอเทมที่หมดอายุแล้ว |
 | 🗑️ | **หมดอายุทุกที่** | ในตัว ในมือ บนพื้น ใน item frame บน armor stand — ตรวจแบบ event และเป็นรอบ |
@@ -367,12 +367,16 @@ Hooks:
   shopkeepers:
     enabled: true         # auto-timer ของที่ซื้อจากร้าน (ต้อง Shopkeepers ≥ 2.19)
     auto_timer: ""        # "" = ปิด
+  quickshop: true         # บล็อกสร้างร้านขาย timed item (รวม Hikari fork)
+  zauctionhouse: true     # บล็อกลงประมูล timed item (V3 + V4)
+  crazyauctions: true     # บล็อกลงประมูล timed item
+  zshop: true             # บล็อกขาย timed item ใน zShop (sell-all + ปิด sell inventory)
 ```
 
 </details>
 
 > **หมายเหตุ**
-> - Hook ทำงานผ่าน **reflection ทั้งหมด** — ไม่เพิ่ม dependency, jar เดียวเหมือนเดิม; เวอร์ชัน API ที่ออกแบบกับ: MMOItems 6.10.x · ItemsAdder 4.x · Oraxen 2.x · Nexo 1.x · ExecutableItems ล่าสุด (SCore) · Slimefun RC-38 · Shopkeepers 2.20+ (ต้อง ≥ 2.19 สำหรับ auto-timer) · CrazyCrates ล่าสุด ถ้าเวอร์ชัน API ไม่ตรง hook ตัวนั้นจะปิดตัวเองอย่างปลอดภัย (ดูได้ที่ `/ti debug export`)
+> - Hook ทำงานผ่าน **reflection ทั้งหมด** — ไม่เพิ่ม dependency, jar เดียวเหมือนเดิม; เวอร์ชัน API ที่ออกแบบกับ: MMOItems 6.10.x · ItemsAdder 4.x · Oraxen 2.x · Nexo 1.x · ExecutableItems ล่าสุด (SCore) · Slimefun RC-38 · Shopkeepers 2.20+ (ต้อง ≥ 2.19 สำหรับ auto-timer) · CrazyCrates ล่าสุด · QuickShop-Hikari 6.x · zAuctionHouse 3.x/4.x · CrazyAuctions ล่าสุด · zShop 3.3.x ถ้าเวอร์ชัน API ไม่ตรง hook ตัวนั้นจะปิดตัวเองอย่างปลอดภัย (ดูได้ที่ `/ti debug export`)
 > - **MythicMobs ยังไม่รองรับ** — item ของ MythicMobs เป็น vanilla stack ไม่มี tag ระบุตัวตน จึงไม่มีทางจำ/สร้างที่เชื่อถือได้ (ใช้ `/ti give` ธรรมดากับของที่สร้างไว้แทน)
 > - ของ custom ที่ติด timer จะถูกเก็บ NBT เต็มตอนหมดอายุ (`recovery.log`) — กู้คืนแล้วของยังเป็นของปลั๊กอินเดิมครบทุกอย่าง
 

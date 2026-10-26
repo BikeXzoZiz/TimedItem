@@ -4,6 +4,9 @@
 
 ## [3.1.1] - 2026-10-27
 
+### Added
+- **รองรับ zShop (GroupeZ)** — hook บล็อกขายตัวที่ 4: ยกเลิก `ZShopSellAllEvent` เมื่อของที่จะขาย (`/zshop sellall` และตอนปิดหน้า sell-inventory) มี timed item ปนอยู่ — event นี้เป็นตัวเดียวของ zShop ที่แบก ItemStack จริงของผู้เล่น (`ShopAction.getItemStack()`) และถูกยิงก่อนลบของทุกเส้นทาง (GUI flow คืนของที่เหลือให้ผู้เล่นเอง จึงไม่มีของหาย); ขายเดี่ยว/sell hand ไม่ต้องบล็อกเพราะ zShop จับคู่ของด้วย `isSimilar` กับของที่ config ไว้ในร้าน ซึ่ง timed item (PDC + lore countdown) ไม่มีทางตรงอยู่แล้ว บล็อกตรงนั้นจะโดนของปกติแทน; ปิดรายตัวได้ที่ `Hooks.zshop: false`
+
 ### Fixed
 - **รองรับ zAuctionHouse V4** — V4 (4.x) เขียนใหม่ทั้งหมดและย้าย event ขายจาก `ZSellEvent` (V3) ไปที่ `fr.maxlego08.zauctionhouse.api.event.events.sell.AuctionPreSellEvent` — hook บล็อกขายของ 3.1.0 จับไม่เจอบน V4; เพิ่ม candidate ใหม่ลำดับแรกพร้อมเก็บ candidates V3 เดิมไว้ครบ รองรับทั้งสองเวอร์ชัน (probe ตัวไหนเจอก่อนใช้ตัวนั้น); getter probe เดิมตรงกับ V4 ทุกตัว (`getItemStack()` / `getPlayer()` / `setCancelled`) ไม่ต้องแก้ hook
 

@@ -7,7 +7,7 @@ description: Give items a lifetime - they expire when the timer runs out.
 authors: [BikeXzoZiz]
 # all integration hooks are optional and reflection based - the plugin
 # still runs (and stays a single jar) when none of these are installed
-softdepend: [PlaceholderAPI, MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, Slimefun, ExecutableItems, SCore, EcoItems, Shopkeepers, CrazyCrates, QuickShop, zAuctionHouse, CrazyAuctions]
+softdepend: [PlaceholderAPI, MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, Slimefun, ExecutableItems, SCore, EcoItems, Shopkeepers, CrazyCrates, QuickShop, zAuctionHouse, CrazyAuctions, zShop]
 commands:
   timeditem:
     description: Manage timed items

@@ -239,6 +239,7 @@ Settings:
     materials: []
 
 # Hooks (self-healing): every integration can be disabled with
-# Hooks.<id>: false. 3.1+ adds QuickShop, zAuctionHouse and
-# CrazyAuctions - when installed, their sell/list events are cancelled
-# for timed items (set the hook to false to allow selling there).
+# Hooks.<id>: false. 3.1+ adds QuickShop, zAuctionHouse,
+# CrazyAuctions and zShop - when installed, their sell/list events
+# are cancelled for timed items (set the hook to false to allow
+# selling there).
