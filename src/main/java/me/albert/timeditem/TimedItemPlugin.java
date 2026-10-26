@@ -116,6 +116,11 @@ public final class TimedItemPlugin extends JavaPlugin {
         return expiryService;
     }
 
+    /** Join/periodic inventory scans - entry point for sync hooks (HuskSync). */
+    public ExpiryListener expiryListener() {
+        return listener;
+    }
+
     public DiscordWebhook discordWebhook() {
         return discordWebhook;
     }

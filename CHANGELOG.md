@@ -2,6 +2,13 @@
 
 รูปแบบอ้างอิง [Keep a Changelog](https://keepachangelog.com/) — รายละเอียดการใช้งานดูที่ [README.md](README.md)
 
+## [3.1.2] - 2026-10-27
+
+### Added
+- **รองรับ HuskSync (WiIIiam278, 3.x/4.x)** — hook ตรวจจับอัตโนมัติ (reflection, ปิดได้ที่ `Hooks.husksync: false`): หลัง HuskSync ใส่ inventory ที่ sync มาให้ผู้เล่น (`BukkitSyncCompleteEvent` — ครอบคลุม join หลังสลับเซิร์ฟ, admin rollback, /invsee edit และ API update) จะ re-scan inventory ทันที (defer 1 tick ผ่าน SchedulerCompat จึง Folia-safe) ปิดช่องที่ join scan วิ่งก่อน sync เสร็จ (ผู้เล่นยังถูก lock อยู่) เหลือหน้าต่าง ~1 tick
+  - timer ทุกชนิดอยู่รอดข้ามเซิร์ฟเองเพราะ HuskSync เก็บไอเทมเป็น raw NBT (PDC + lore ไม่หาย) — แบบ expire เป็น epoch นับถอยหลังตอนออฟไลน์ได้, playtime/held นับตอนออนไลน์บนเซิร์ฟที่ไอเทมอยู่ จึงไม่ต้องตั้งค่าอะไรฝั่ง HuskSync
+  - hook นี้ passive (ไม่เคย cancel อะไร) — getter probe 3 ชั้น: `getPlayer()` บน event → `getPlayer()` บน OnlineUser → `getUuid()` + `Bukkit.getPlayer(uuid)` (เพราะ `getPlayer()` อยู่บน BukkitUser ที่เป็น subclass ของ OnlineUser ใน common)
+
 ## [3.1.1] - 2026-10-27
 
 ### Added

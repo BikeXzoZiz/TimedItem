@@ -96,6 +96,8 @@ public final class HookManager {
         // zShop carries the sold stacks on a list of ShopActions instead of
         // a single ItemStack getter, so it gets its own hook (3.1.1+)
         hookZShopSell(config);
+        // re-scan the inventory after HuskSync applied synced data (3.1.2+)
+        hookHuskSync(config);
         if (!active.isEmpty()) {
             plugin.getLogger().info("Hooked into item plugins: " + String.join(", ", active)
                     + " (identify + /ti give <player> <plugin>:<id> <time>).");
@@ -268,6 +270,26 @@ public final class HookManager {
         if (registration != null) {
             distributionRegistrations.add(registration);
             plugin.getLogger().info("Hooked into zShop (block selling timed items).");
+        }
+    }
+
+    /**
+     * Re-scans the inventory after HuskSync applied synced player data
+     * (3.1.2+): the join scan runs before the synced inventory lands, so
+     * this covers server switches, admin rollbacks and /invsee edits.
+     * Passive hook - it never cancels anything.
+     */
+    private void hookHuskSync(PluginConfig config) {
+        if (!config.isHookEnabled("husksync")) {
+            return;
+        }
+        if (!Bukkit.getPluginManager().isPluginEnabled("HuskSync")) {
+            return;
+        }
+        ReflectiveEventHook.Registration registration = HuskSyncHook.register(plugin, "HuskSync");
+        if (registration != null) {
+            distributionRegistrations.add(registration);
+            plugin.getLogger().info("Hooked into HuskSync (re-scan inventory after data sync).");
         }
     }
 

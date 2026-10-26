@@ -371,14 +371,27 @@ Hooks:
   zauctionhouse: true     # บล็อกลงประมูล timed item (V3 + V4)
   crazyauctions: true     # บล็อกลงประมูล timed item
   zshop: true             # บล็อกขาย timed item ใน zShop (sell-all + ปิด sell inventory)
+  husksync: true          # re-scan inventory หลัง HuskSync apply ข้อมูล (sync ข้ามเซิร์ฟ)
 ```
 
 </details>
 
 > **หมายเหตุ**
-> - Hook ทำงานผ่าน **reflection ทั้งหมด** — ไม่เพิ่ม dependency, jar เดียวเหมือนเดิม; เวอร์ชัน API ที่ออกแบบกับ: MMOItems 6.10.x · ItemsAdder 4.x · Oraxen 2.x · Nexo 1.x · ExecutableItems ล่าสุด (SCore) · Slimefun RC-38 · Shopkeepers 2.20+ (ต้อง ≥ 2.19 สำหรับ auto-timer) · CrazyCrates ล่าสุด · QuickShop-Hikari 6.x · zAuctionHouse 3.x/4.x · CrazyAuctions ล่าสุด · zShop 3.3.x ถ้าเวอร์ชัน API ไม่ตรง hook ตัวนั้นจะปิดตัวเองอย่างปลอดภัย (ดูได้ที่ `/ti debug export`)
+> - Hook ทำงานผ่าน **reflection ทั้งหมด** — ไม่เพิ่ม dependency, jar เดียวเหมือนเดิม; เวอร์ชัน API ที่ออกแบบกับ: MMOItems 6.10.x · ItemsAdder 4.x · Oraxen 2.x · Nexo 1.x · ExecutableItems ล่าสุด (SCore) · Slimefun RC-38 · Shopkeepers 2.20+ (ต้อง ≥ 2.19 สำหรับ auto-timer) · CrazyCrates ล่าสุด · QuickShop-Hikari 6.x · zAuctionHouse 3.x/4.x · CrazyAuctions ล่าสุด · zShop 3.3.x · HuskSync 3.x/4.x (API v3) ถ้าเวอร์ชัน API ไม่ตรง hook ตัวนั้นจะปิดตัวเองอย่างปลอดภัย (ดูได้ที่ `/ti debug export`)
 > - **MythicMobs ยังไม่รองรับ** — item ของ MythicMobs เป็น vanilla stack ไม่มี tag ระบุตัวตน จึงไม่มีทางจำ/สร้างที่เชื่อถือได้ (ใช้ `/ti give` ธรรมดากับของที่สร้างไว้แทน)
 > - ของ custom ที่ติด timer จะถูกเก็บ NBT เต็มตอนหมดอายุ (`recovery.log`) — กู้คืนแล้วของยังเป็นของปลั๊กอินเดิมครบทุกอย่าง
+
+### HuskSync (sync ข้ามเซิร์ฟ — 3.1.2+)
+
+ใช้ร่วมกับ [HuskSync](https://github.com/WiIIiam278/HuskSync) (3.x / 4.x) ได้ โดยตรวจจับอัตโนมัติและไม่ต้องตั้งค่าอะไรฝั่ง HuskSync:
+
+- **Timer เดินทางกับไอเทม** — HuskSync sync inventory เป็น raw NBT ทั้งไอเทม PDC + lore countdown จึงไม่หาย ไม่ว่าผู้เล่นจะสลับเซิร์ฟกี่ครั้ง
+- **แบบ expire** — เก็บเป็น epoch สัมบูรณ์ นับถอยหลังแม้ผู้เล่นออฟไลน์/อยู่เซิร์ฟอื่น ของจะถูกลบพร้อมบันทึก recovery ทันทีที่ scan เจอหลังเข้าเซิร์ฟ
+- **แบบ playtime / held** — นับเฉพาะตอนผู้เล่นออนไลน์ (ไอเทมอยู่กับผู้เล่นตลอด) จึงถูกต้องทุกเซิร์ฟโดยไม่ต้องพึ่งการ sync สถิติของ HuskSync
+- **Re-scan หลัง sync** — join scan ของ TimedItem วิ่ง *ก่อน* ที่ HuskSync จะใส่ inventory ที่ sync มา hook จึง re-scan อีกครั้งหลัง sync เสร็จทันที (`BukkitSyncCompleteEvent` — ครอบคลุม join หลังสลับเซิร์ฟ, admin rollback และ /invsee edit ด้วย)
+- **Network restore ไม่ชนกัน** — `/ti restore` โหมด network (แชร์ DB) ทำงานต่างหากจาก snapshot ของ HuskSync ได้ตามปกติ
+
+> **Caveat:** ถ้า admin restore snapshot เก่า (ก่อนหมดอายุ) ผ่าน `/userdata` ของ HuskSync ไอเทมจะกลับมาพร้อมเวลาเดิม — เป็น edge case ฝั่ง admin action เท่านั้น ส่วนไอเทมที่ sync กลับมาในสถานะหมดอายุแล้ว จะโดน expire ใหม่ทันทีพร้อมบันทึก recovery ตามปกติ
 
 ## 🔌 Developer API
 

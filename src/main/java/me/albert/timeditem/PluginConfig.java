@@ -216,7 +216,7 @@ public final class PluginConfig {
     private static final String[] HOOK_IDS = {
             "mmoitems", "itemsadder", "oraxen", "nexo", "executableitems",
             "slimefun", "ecoitems", "shopkeepers", "crazycrates",
-            "quickshop", "zauctionhouse", "crazyauctions", "zshop"
+            "quickshop", "zauctionhouse", "crazyauctions", "zshop", "husksync"
     };
 
     public PluginConfig(TimedItemPlugin plugin) {
