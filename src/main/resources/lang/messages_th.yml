@@ -19,6 +19,8 @@ Messages:
   already_running: "&7ตัวจับเวลาบนไอเทมนี้นับอยู่แล้ว"
   invalid_usage: "&cวิธีใช้: /ti set <เวลา>, /ti add <เวลา>, /ti give <ผู้เล่น> [plugin:ไอดี] <เวลา> [จำนวน], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload"
   config_reload: "&aโหลด config ของ TimedItem ใหม่แล้ว"
+  reload_in_progress: "&7กำลังโหลด config ใหม่อยู่ - รอให้เสร็จก่อน"
+  reload_failed: "&cโหลด config ใหม่ไม่สำเร็จ: &7{error} &c- ใช้ config เดิมต่อไป"
   time_set: "&aตั้งตัวจับเวลา: &e{time}"
   info_remaining: "&7เวลาที่เหลือ: &e{time}"
   info_lifetime: "&7อายุการใช้งาน: &e{time} &7(เริ่มนับเมื่อใช้ครั้งแรก)"

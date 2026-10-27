@@ -4,10 +4,25 @@
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-10-27
+
 ### Added
-- **ระบบทดสอบครบชุด 3 ชั้น** (โฟลเดอร์ `testing/` + `testing/README.md`) — unit tests เพิ่ม 5 ไฟล์ (VisualStages, TrackedItems, HookReflection, SchedulerCompat + ขยาย HookToken) รวม 18 ไฟล์ · ปลั๊กอินทดสอบในเกม `TimedItemTestHarness` รัน 10 scenarios จาก console แล้วพ่อ `[TITEST] PASS/FAIL` ลง log (boot, lore roundtrip + PDC, API guard rails, ground expiry, transform, container scan, holograms, Folia gates, hooks roundtrip, auto-timer) · **test matrix `testing/run-matrix.sh`** บูต server จริง 4 แพลตฟอร์ม (Paper 1.21.x / Folia / Purpur / Paper 1.20.x) headless พร้อม **FakeHooks stubs จำลอง API ทุก integration** (MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, ExecutableItems, Slimefun, EcoItems, Shopkeepers, CrazyCrates) แล้วรัน harness ทุก lane สรุปตารางผ่าน/พัง · lane `hooks-lane` รันซ้ำกับ jar ปลั๊กอินจริงจาก `testing/real-hooks/`
+- **`/ti reload` ทำงานแบบ async** — เดิมการ reload อ่าน + parse `config.yml` และไฟล์ภาษาบน main thread ตรง ๆ (I/O ช่วงเดียวกับ tick loop) — ตอนนี้โหลด/parse/เขียน self-heal กลับลงไฟล์ทั้งหมดบน async thread แล้วสลับ config ใหม่เข้าบน main/global thread (รวม re-apply: debug, recovery log, hook toggles, periodic tasks) ปิดรอบ reload ที่ทับกัน (ขอซ้ำจะตอบ `Messages.reload_in_progress`) และถ้าไฟล์ใหม่โหลดไม่ผ่านจะ **คง config เดิมไว้** พร้อมแจ้ง `Messages.reload_failed` — อย่าลืมเพิ่ม 2 key นี้ในไฟล์แปลภาษาที่แก้มือเอง (มี default ภาษาอังกฤษครอบให้อยู่แล้ว)
+
+### Changed (refactor — ไม่เปลี่ยนพฤติกรรม)
+- **แบ่งคลาสใหญ่ 3 ตัว** โดย API ภายนอกเหมือนเดิมทุก getter ผู้เรียกทั้ง 22 คลาสไม่ต้องแก้:
+  - `PluginConfig` (1,565 บรรทัด) → **immutable snapshot**: ตัวเองเหลือเป็น read-only facade, ค่าภาษาย้ายลง `Messages`, ค่า config.yml ย้ายลง `Settings`, logic โหลด/defaults/self-heal/migration ย้ายลง `ConfigLoader` — ทุกฟิลด์เป็น `final` ทำให้ /ti reload สลับทั้งชุดแบบ atomic ได้ ไม่มี config ครึ่ง ๆ กลาง ๆ มองข้าม thread (แก้จุดที่ config ถูกอ่านข้าม thread โดยไม่มี volatile ด้วย)
+  - `TimedItemCommand` (1,004 บรรทัด) → dispatcher สั้น ๆ + 1 คลาสต่อ subcommand ใน `me.albert.timeditem.command` (16 ตัว) + helper รวมที่ `CommandSupport` (requirePlayer/mainHand/audit/transform-scan)
+  - `ExpiryListener` (595 บรรทัด) → แยก renewal token ลง `RenewalHandler`, grace period ลง `GraceHandler`, cooldown ข้อความร่วมลง `NoticeCooldown` — listener หลักเหลือ event ทั่วไป + inventory scan
+- `PluginConfig.load()` ไม่แตะ cache ของ `JavaPlugin#getConfig()` อีกต่อไป (อ่าน/เขียนไฟล์จาก `YamlConfiguration` ของตัวเอง) จึงเรียกจาก async thread ได้ปลอดภัย และ startup กับ reload ใช้ path เดียวกัน
+
+### Technical
+- unit tests 116 ชุดผ่าน · matrix paper lane ผ่าน (สแกน smoke `/ti reload` บน Paper 1.21.11)
 
 ## [3.1.4] - 2026-10-27
+
+### Added
+- **ระบบทดสอบครบชุด 3 ชั้น** (โฟลเดอร์ `testing/` + `testing/README.md`, มาพร้อม jar 3.1.4) — unit tests เพิ่ม 5 ไฟล์ (VisualStages, TrackedItems, HookReflection, SchedulerCompat + ขยาย HookToken) รวม 18 ไฟล์ · ปลั๊กอินทดสอบในเกม `TimedItemTestHarness` รัน 10 scenarios จาก console แล้วพ่อ `[TITEST] PASS/FAIL` ลง log (boot, lore roundtrip + PDC, API guard rails, ground expiry, transform, container scan, holograms, Folia gates, hooks roundtrip, auto-timer) · **test matrix `testing/run-matrix.sh`** บูต server จริง 4 แพลตฟอร์ม (Paper 1.21.x / Folia / Purpur / Paper 1.20.x) headless พร้อม **FakeHooks stubs จำลอง API ทุก integration** (MythicLib, MMOItems, ItemsAdder, Oraxen, Nexo, ExecutableItems, Slimefun, EcoItems, Shopkeepers, CrazyCrates) แล้วรัน harness ทุก lane สรุปตารางผ่าน/พัง · lane `hooks-lane` รันซ้ำกับ jar ปลั๊กอินจริงจาก `testing/real-hooks/`
 
 ### Changed (ประสิทธิภาพ)
 - **แคช reflection ครั้งเดียวใน hot path ทั้ง 6 จุด** — จุดที่ถูกเรียกถี่ที่สุดของทุก hook เคยสแกน `getMethods()` ทั้งชุดใหม่ทุกครั้งที่ถูกเรียก: identify ของ ItemsAdder/Slimefun (`getId`/`getNamespace`), **EcoItems ที่เดิน registry ทั้งชุดต่อ 1 identify (จุดแพงสุด)**, auto-timer ของ Shopkeepers/CrazyCrates ที่สแกน 2-3 ครั้งต่อ event, และ `ParticleCompat` ที่ `Class.forName` + `getField` ต่อ particle ที่ปล่อยทุกครั้งที่ expire — ตอนนี้ resolve ครั้งเดียว (ตอน construct / ตอน event แรก / แคชต่อชื่อพร้อม negative cache สำหรับชื่อที่ผิด) พฤติกรรม degrade เมื่อ hook ไม่ตรงเวอร์ชันเหมือนเดิมครบ

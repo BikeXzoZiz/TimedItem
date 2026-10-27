@@ -19,6 +19,8 @@ Messages:
   already_running: "&7The timer on this item is already running."
   invalid_usage: "&cUsage: /ti set <time>, /ti add <time>, /ti give <player> [plugin:id] <time> [amount], /ti pause, /ti resume, /ti remove, /ti info, /ti menu, /ti restore, /ti debug, /ti reload"
   config_reload: "&aTimedItem config reloaded."
+  reload_in_progress: "&7A config reload is already running - wait for it to finish."
+  reload_failed: "&cConfig reload failed: &7{error} &c- the old config stays active."
   time_set: "&aTimer set: &e{time}"
   info_remaining: "&7Time remaining: &e{time}"
   info_lifetime: "&7Lifetime: &e{time} &7(starts on first use)"

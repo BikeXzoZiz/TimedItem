@@ -1,0 +1,253 @@
+package me.albert.timeditem;
+
+import org.bukkit.configuration.file.FileConfiguration;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * Immutable snapshot of the language file (Messages.*, Gui.* and
+ * DateFormat.*). Built by {@link ConfigLoader} and held by
+ * {@link PluginConfig}; a reload builds a fresh instance instead of
+ * mutating this one, so any thread reading a value either sees the old
+ * or the new translation in full - never a half-updated mix.
+ */
+final class Messages {
+
+    final String prefix;
+    final String expire;
+    final String expireSoon;
+    final String noItem;
+    final String playerOnly;
+    final String noTimer;
+    final String itemCleared;
+    final String timeAdded;
+    final String timerPaused;
+    final String timerResumed;
+    final String timerNotStarted;
+    final String alreadyPaused;
+    final String alreadyRunning;
+    final String invalidUsage;
+    final String configReload;
+    final String reloadInProgress;
+    final String reloadFailed;
+    final String timeSet;
+    final String infoRemaining;
+    final String infoLifetime;
+    final String giveSent;
+    final String giveReceived;
+    final String targetNotFound;
+    final String materialBlacklisted;
+    final String restoreGiven;
+    final String restoreEmpty;
+    final String updateAvailable;
+    final String debugStatus;
+    final String debugOn;
+    final String debugOff;
+    final String debugExported;
+    final String debugExportFailed;
+    final String debugUsage;
+    final String itemNotFound;
+    final String findUsage;
+    final String findNoMatch;
+    final String findResult;
+    final String findTruncated;
+    final String findHitPlayer;
+    final String findHitContainer;
+    final String findHitGround;
+    final String statsHeader;
+    final String statsLine;
+    final String statsTotal;
+    final String statsEmpty;
+    final String auditHeader;
+    final String auditLine;
+    final String auditEmpty;
+    final String transformMessage;
+    final String graceMessage;
+    final String renewalSuccess;
+    final String renewalTokenMissing;
+    final String restoreReminder;
+    final String transformUnknown;
+    final String antiHideBlocked;
+    final String checkUsage;
+    final String checkOffline;
+    final String checkHeader;
+    final String checkLine;
+    final String checkEmpty;
+    final String guiAdminTitle;
+    final String guiAdminOwner;
+    final String guiAdminType;
+    final String guiAdminExpireNow;
+    final String guiAdminRemoveTimer;
+    final String guiAdminEmpty;
+    final String guiAdminPrev;
+    final String guiAdminNext;
+    final String guiAdminExpired;
+    final String guiAdminRemoved;
+    final String infoOwner;
+    final String returnedToOwner;
+    final String sellBlocked;
+    final String restoreLoading;
+    final String restoreNetworkTitle;
+    final String guiMenuTitle;
+    final String guiPresetLore;
+    final String guiToggleName;
+    final String guiToggleLore;
+    final String guiRemoveName;
+    final String guiRemoveLore;
+    final String guiCloseName;
+    final String guiStatusName;
+    final String guiStatusNoTimer;
+    final String guiStatusTypeExpire;
+    final String guiStatusTypePaused;
+    final String guiStatusTypeLifetime;
+    final String guiStatusTypePlaytime;
+    final String guiStatusTypeHeld;
+    final String guiStatusRemaining;
+    final String guiStatusExpiresAt;
+    final String guiStatusDuration;
+    final String guiRestoreTitle;
+    final String guiRestoreDate;
+    final String guiRestorePlayer;
+    final String guiRestoreWorld;
+    final String guiRestoreClick;
+    final String guiRestorePrev;
+    final String guiRestoreNext;
+
+    final String expiresAtPrefix;
+    final String usefulLifePrefix;
+    final String pausedPrefix;
+    final String playtimePrefix;
+    final String heldPrefix;
+    final String unitS;
+    final String unitM;
+    final String unitH;
+    final String unitD;
+    /** Configured unit labels (lowercased) mapped to their length in seconds. */
+    final Map<String, Long> unitSeconds;
+
+    Messages(FileConfiguration lang) {
+        prefix = ConfigLoader.color(lang.getString("Messages.prefix"));
+        expire = ConfigLoader.color(lang.getString("Messages.expire"));
+        expireSoon = ConfigLoader.color(lang.getString("Messages.expire_soon"));
+        noItem = ConfigLoader.color(lang.getString("Messages.no_item"));
+        playerOnly = ConfigLoader.color(lang.getString("Messages.player_only"));
+        noTimer = ConfigLoader.color(lang.getString("Messages.no_timer"));
+        itemCleared = ConfigLoader.color(lang.getString("Messages.item_cleared"));
+        timeAdded = ConfigLoader.color(lang.getString("Messages.time_added"));
+        timerPaused = ConfigLoader.color(lang.getString("Messages.timer_paused"));
+        timerResumed = ConfigLoader.color(lang.getString("Messages.timer_resumed"));
+        timerNotStarted = ConfigLoader.color(lang.getString("Messages.timer_not_started"));
+        alreadyPaused = ConfigLoader.color(lang.getString("Messages.already_paused"));
+        alreadyRunning = ConfigLoader.color(lang.getString("Messages.already_running"));
+        invalidUsage = ConfigLoader.color(lang.getString("Messages.invalid_usage"));
+        configReload = ConfigLoader.color(lang.getString("Messages.config_reload"));
+        reloadInProgress = ConfigLoader.color(lang.getString("Messages.reload_in_progress"));
+        reloadFailed = ConfigLoader.color(lang.getString("Messages.reload_failed"));
+        timeSet = ConfigLoader.color(lang.getString("Messages.time_set"));
+        infoRemaining = ConfigLoader.color(lang.getString("Messages.info_remaining"));
+        infoLifetime = ConfigLoader.color(lang.getString("Messages.info_lifetime"));
+        giveSent = ConfigLoader.color(lang.getString("Messages.give_sent"));
+        giveReceived = ConfigLoader.color(lang.getString("Messages.give_received"));
+        targetNotFound = ConfigLoader.color(lang.getString("Messages.target_not_found"));
+        materialBlacklisted = ConfigLoader.color(lang.getString("Messages.material_blacklisted"));
+        restoreGiven = ConfigLoader.color(lang.getString("Messages.restore_given"));
+        restoreEmpty = ConfigLoader.color(lang.getString("Messages.restore_empty"));
+        updateAvailable = ConfigLoader.color(lang.getString("Messages.update_available"));
+
+        debugStatus = ConfigLoader.color(lang.getString("Messages.debug_status"));
+        debugOn = ConfigLoader.color(lang.getString("Messages.debug_on"));
+        debugOff = ConfigLoader.color(lang.getString("Messages.debug_off"));
+        debugExported = ConfigLoader.color(lang.getString("Messages.debug_exported"));
+        debugExportFailed = ConfigLoader.color(lang.getString("Messages.debug_export_failed"));
+        debugUsage = ConfigLoader.color(lang.getString("Messages.debug_usage"));
+        itemNotFound = ConfigLoader.color(lang.getString("Messages.item_not_found"));
+
+        findUsage = ConfigLoader.color(lang.getString("Messages.find_usage"));
+        findNoMatch = ConfigLoader.color(lang.getString("Messages.find_no_match"));
+        findResult = ConfigLoader.color(lang.getString("Messages.find_result"));
+        findTruncated = ConfigLoader.color(lang.getString("Messages.find_truncated"));
+        findHitPlayer = ConfigLoader.color(lang.getString("Messages.find_hit_player"));
+        findHitContainer = ConfigLoader.color(lang.getString("Messages.find_hit_container"));
+        findHitGround = ConfigLoader.color(lang.getString("Messages.find_hit_ground"));
+        statsHeader = ConfigLoader.color(lang.getString("Messages.stats_header"));
+        statsLine = ConfigLoader.color(lang.getString("Messages.stats_line"));
+        statsTotal = ConfigLoader.color(lang.getString("Messages.stats_total"));
+        statsEmpty = ConfigLoader.color(lang.getString("Messages.stats_empty"));
+        auditHeader = ConfigLoader.color(lang.getString("Messages.audit_header"));
+        auditLine = ConfigLoader.color(lang.getString("Messages.audit_line"));
+        auditEmpty = ConfigLoader.color(lang.getString("Messages.audit_empty"));
+        transformMessage = ConfigLoader.color(lang.getString("Messages.transform_received"));
+        graceMessage = ConfigLoader.color(lang.getString("Messages.grace_blocked"));
+        renewalSuccess = ConfigLoader.color(lang.getString("Messages.renewal_success"));
+        renewalTokenMissing = ConfigLoader.color(lang.getString("Messages.renewal_token_missing"));
+        restoreReminder = ConfigLoader.color(lang.getString("Messages.restore_reminder"));
+        transformUnknown = ConfigLoader.color(lang.getString("Messages.transform_unknown"));
+        antiHideBlocked = ConfigLoader.color(lang.getString("Messages.anti_hide_blocked"));
+        checkUsage = ConfigLoader.color(lang.getString("Messages.check_usage"));
+        checkOffline = ConfigLoader.color(lang.getString("Messages.check_offline"));
+        checkHeader = ConfigLoader.color(lang.getString("Messages.check_header"));
+        checkLine = ConfigLoader.color(lang.getString("Messages.check_line"));
+        checkEmpty = ConfigLoader.color(lang.getString("Messages.check_empty"));
+        guiAdminTitle = ConfigLoader.color(lang.getString("Gui.admin_title"));
+        guiAdminOwner = ConfigLoader.color(lang.getString("Gui.admin_owner"));
+        guiAdminType = ConfigLoader.color(lang.getString("Gui.admin_type"));
+        guiAdminExpireNow = ConfigLoader.color(lang.getString("Gui.admin_expire_now"));
+        guiAdminRemoveTimer = ConfigLoader.color(lang.getString("Gui.admin_remove_timer"));
+        guiAdminEmpty = ConfigLoader.color(lang.getString("Gui.admin_empty"));
+        guiAdminPrev = ConfigLoader.color(lang.getString("Gui.admin_prev"));
+        guiAdminNext = ConfigLoader.color(lang.getString("Gui.admin_next"));
+        guiAdminExpired = ConfigLoader.color(lang.getString("Messages.admin_expired"));
+        guiAdminRemoved = ConfigLoader.color(lang.getString("Messages.admin_removed"));
+        infoOwner = ConfigLoader.color(lang.getString("Messages.info_owner"));
+        returnedToOwner = ConfigLoader.color(lang.getString("Messages.returned_to_owner"));
+        sellBlocked = ConfigLoader.color(lang.getString("Messages.sell_blocked"));
+        restoreLoading = ConfigLoader.color(lang.getString("Messages.restore_loading"));
+        restoreNetworkTitle = ConfigLoader.color(lang.getString("Messages.restore_network_title"));
+
+        // GUI labels also come from the language file.
+        guiMenuTitle = ConfigLoader.color(lang.getString("Gui.menu_title"));
+        guiPresetLore = ConfigLoader.color(lang.getString("Gui.preset_lore"));
+        guiToggleName = ConfigLoader.color(lang.getString("Gui.toggle_name"));
+        guiToggleLore = ConfigLoader.color(lang.getString("Gui.toggle_lore"));
+        guiRemoveName = ConfigLoader.color(lang.getString("Gui.remove_name"));
+        guiRemoveLore = ConfigLoader.color(lang.getString("Gui.remove_lore"));
+        guiCloseName = ConfigLoader.color(lang.getString("Gui.close_name"));
+        guiStatusName = ConfigLoader.color(lang.getString("Gui.status_name"));
+        guiStatusNoTimer = ConfigLoader.color(lang.getString("Gui.status_no_timer"));
+        guiStatusTypeExpire = ConfigLoader.color(lang.getString("Gui.status_type_expire"));
+        guiStatusTypePaused = ConfigLoader.color(lang.getString("Gui.status_type_paused"));
+        guiStatusTypeLifetime = ConfigLoader.color(lang.getString("Gui.status_type_lifetime"));
+        guiStatusTypePlaytime = ConfigLoader.color(lang.getString("Gui.status_type_playtime"));
+        guiStatusTypeHeld = ConfigLoader.color(lang.getString("Gui.status_type_held"));
+        guiStatusRemaining = ConfigLoader.color(lang.getString("Gui.status_remaining"));
+        guiStatusExpiresAt = ConfigLoader.color(lang.getString("Gui.status_expires_at"));
+        guiStatusDuration = ConfigLoader.color(lang.getString("Gui.status_duration"));
+        guiRestoreTitle = ConfigLoader.color(lang.getString("Gui.restore_title"));
+        guiRestoreDate = ConfigLoader.color(lang.getString("Gui.restore_date"));
+        guiRestorePlayer = ConfigLoader.color(lang.getString("Gui.restore_player"));
+        guiRestoreWorld = ConfigLoader.color(lang.getString("Gui.restore_world"));
+        guiRestoreClick = ConfigLoader.color(lang.getString("Gui.restore_click"));
+        guiRestorePrev = ConfigLoader.color(lang.getString("Gui.restore_prev"));
+        guiRestoreNext = ConfigLoader.color(lang.getString("Gui.restore_next"));
+
+        expiresAtPrefix = ConfigLoader.color(lang.getString("DateFormat.expires_at"));
+        usefulLifePrefix = ConfigLoader.color(lang.getString("DateFormat.useful_life"));
+        pausedPrefix = ConfigLoader.color(lang.getString("DateFormat.paused"));
+        playtimePrefix = ConfigLoader.color(lang.getString("DateFormat.playtime"));
+        heldPrefix = ConfigLoader.color(lang.getString("DateFormat.held"));
+        unitS = lang.getString("DateFormat.s", "s");
+        unitM = lang.getString("DateFormat.m", "m");
+        unitH = lang.getString("DateFormat.h", "h");
+        unitD = lang.getString("DateFormat.d", "d");
+
+        Map<String, Long> units = new HashMap<String, Long>();
+        units.put(unitS.toLowerCase(Locale.ROOT), 1L);
+        units.put(unitM.toLowerCase(Locale.ROOT), 60L);
+        units.put(unitH.toLowerCase(Locale.ROOT), 3600L);
+        units.put(unitD.toLowerCase(Locale.ROOT), 86400L);
+        unitSeconds = Collections.unmodifiableMap(units);
+    }
+}

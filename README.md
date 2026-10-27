@@ -65,7 +65,7 @@
 
 ## 🚀 เริ่มใช้ใน 1 นาที
 
-1. ดาวน์โหลด `TimedItem-3.1.4.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
+1. ดาวน์โหลด `TimedItem-3.2.0.jar` จาก [Releases](https://github.com/BikeXzoZiz/TimedItem/releases) แล้ววางในโฟลเดอร์ `plugins/`
 2. รีสตาร์ทเซิร์ฟเวอร์ — เสร็จ! (ค่า default ใช้ได้ทันที)
 3. ลองเลย:
 
@@ -621,6 +621,7 @@ TimedItemAPI.pause(item) / resume(item) / clear(item)
 
 | เวอร์ชัน | สรุป |
 |---|---|
+| **v3.2.0** | `/ti reload` ทำงานแบบ async — โหลด/parse config + ไฟล์ภาษาบน async thread แล้วสลับ snapshot ใหม่บน main thread (I/O ไม่แตะ tick loop; โหลดไม่ผ่าน = คง config เดิม) · refactor ภายในแบบไม่เปลี่ยนพฤติกรรม: แบ่ง PluginConfig (immutable snapshot)/TimedItemCommand (subcommand แยกคลาส)/ExpiryListener (renewal/grace แยกคลาส) · drop-in ทั้งเวอร์ชัน (ไฟล์แปลภาษาที่แก้มือควรเพิ่ม `Messages.reload_in_progress` + `Messages.reload_failed` มี default ครอบให้) |
 | **v3.1.4** | ประสิทธิภาพล้วน (drop-in) — แคช reflection ครั้งเดียวใน hot path ทั้ง 6 จุด (identify hooks / auto-timer / particle) · FlatFile เขียนไฟล์แบบ write-behind เร็วสุด 1 ครั้ง/วินาที + `stats.yml` atomic (**ข้อแลกเปลี่ยน**: crash hard อาจเสียข้อมูล recovery/audit/stats วินาทีสุดท้าย — ปิดเซิร์ฟปกติไม่เสีย) · SQL/Mongo trim ตาราง audit ทุก 64 inserts แทนทุก insert · NBT encode ของ recovery ย้ายไป background thread |
 | **v3.1.3** | แก้บั๊กล้วน — anti-hide/container open-scan ใช้งานได้บน 1.21+ (`InventoryView` class→interface) · visual stage ไม่พังเมื่อ PDC tag เสีย · write-back สี stage/นับถอยหลังไม่หายบนแพลตฟอร์มที่ให้สำเนา ItemStack · ปิด leak (`lastNotice`, webhook flush ตอนปิด, UpdateChecker socket) และแก้ race ของ StorageWriter ตอน disable |
 | **v3.1.2** | HuskSync compatibility — re-scan inventory ทันทีหลัง sync ข้ามเซิร์ฟ (`BukkitSyncCompleteEvent`) ปิดช่อง join scan วิ่งก่อน sync เสร็จ · timer ทุกชนิดอยู่รอดข้ามเซิร์ฟเองจาก raw NBT · ปิดได้ `Hooks.husksync: false` |

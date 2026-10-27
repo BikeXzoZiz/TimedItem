@@ -15,7 +15,8 @@ public final class TimedItemPlugin extends JavaPlugin {
     /** bStats plugin id - TimedItemRewrite, https://bstats.org/plugin/bukkit/TimedItemRewrite/34946 */
     private static final int BSTATS_PLUGIN_ID = 34946;
 
-    private PluginConfig config;
+    /** Immutable snapshot; swapped atomically by /ti reload, see applyConfig. */
+    private volatile PluginConfig config;
     private ExpiryService expiryService;
     private ExpiryListener listener;
     private TimedItemMenu menu;
@@ -37,8 +38,7 @@ public final class TimedItemPlugin extends JavaPlugin {
     public void onEnable() {
         PdcCompat.init(this);
         HologramCompat.init();
-        config = new PluginConfig(this);
-        config.load();
+        config = PluginConfig.load(this);
         DebugLog.install(getLogger());
         DebugLog.setEnabled(config.isDebugEnabled());
         // storage is created once and never re-created by /ti reload -
@@ -225,5 +225,19 @@ public final class TimedItemPlugin extends JavaPlugin {
 
     public PluginConfig pluginConfig() {
         return config;
+    }
+
+    /**
+     * Swaps in a freshly loaded config (async reload) and re-applies
+     * everything that follows the config: debug switch, recovery log,
+     * hook toggles and the periodic tasks. Storage is deliberately
+     * absent - changing its type needs a restart by design.
+     */
+    public void applyConfig(PluginConfig fresh) {
+        this.config = fresh;
+        DebugLog.setEnabled(fresh.isDebugEnabled());
+        recoveryStore.load();
+        hooks.applyConfig();
+        startTasks();
     }
 }
